@@ -58,5 +58,16 @@ replace_once('''  .center-img-btn.pressed{ border-color:var(--accent); backgroun
   @media (prefers-reduced-motion:reduce){ .center-img-btn.pressed{ animation:none; } }''',
              '  .center-img-btn.pressed{ border-color:var(--accent); background:#F3EAFD; box-shadow:0 0 0 4px rgba(125,42,231,.18); }')
 
+replace_once('  .transport{ display:flex; gap:10px; align-items:center; }',
+             '  .transport{ display:flex; gap:10px; align-items:center; }\n  .transport .btn{ font-weight:500; }\n  .transport .transport-icon{ color:var(--accent); }')
+replace_once('<button class="btn btn-ghost" id="playBtn">▶ تشغيل المعاينة</button>',
+             '<button class="btn btn-ghost" id="playBtn"><span class="transport-icon" aria-hidden="true">▶</span> تشغيل المعاينة</button>')
+replace_once('<button class="btn btn-ghost" id="resetBtn">↺ البداية</button>',
+             '<button class="btn btn-ghost" id="resetBtn"><span class="transport-icon" aria-hidden="true">↺</span> البداية</button>')
+replace_once('playBtn.textContent = "▶ تشغيل المعاينة";',
+             'playBtn.innerHTML = \'<span class="transport-icon" aria-hidden="true">▶</span> تشغيل المعاينة\';')
+replace_once('playBtn.textContent = "⏸ إيقاف مؤقت";',
+             'playBtn.innerHTML = \'<span class="transport-icon" aria-hidden="true">⏸</span> إيقاف مؤقت\';')
+
 path.write_text(html, encoding="utf-8")
 print("Automatic two-line headline spacing applied")
