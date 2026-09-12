@@ -44674,7 +44674,7 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
     const headlineLayer = state.texts[0];
     const headlineIsSingle = Boolean(headlineLayer.text.trim()) &&
       wrapLines(headlineLayer.text, `${headlineLayer.size}px 'PFDinXBlack'`, maxWidth).length === 1;
-    let y = TEXT_BOX.y + (sublineLayer && !sublineLayer.text.trim() ? 45 : headlineIsSingle ? singleLineSublineOffset : 0);
+    let y = TEXT_BOX.y + (sublineLayer && !sublineLayer.text.trim() ? 50 : headlineIsSingle ? singleLineSublineOffset : 0);
     ctx.direction = "rtl";
     ctx.textAlign = "center";
     ctx.textBaseline = "alphabetic";
