@@ -22,6 +22,8 @@ jobs:
           echo "ca259b97195ff7e56ce7099a11fcee5e5126b98241d189a554358ef7c165fb43  public/index.html" | sha256sum -c -
           python3 apply-reviewed-version.py public/index.html
           python3 swipe_mobile_patch.py public/index.html
+          python3 headline_spacing_patch.py public/index.html
+          grep -F 'syncHeadlineLineSpacing();' public/index.html
           grep -F 'y += 1.6;' public/index.html
           grep -F 'singleLineSublineOffset = 20' public/index.html
           grep -F 'const anchorFx = 0.5, anchorFy = 0.25;' public/index.html
