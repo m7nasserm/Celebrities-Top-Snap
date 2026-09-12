@@ -44,5 +44,8 @@ replace_once('    let y = TEXT_BOX.y + singleLineSublineOffset;',
 replace_once('        state.texts[idx].lineSpacing = +e.target.value;',
              '        preferredTextLineSpacing[idx] = +e.target.value;\n        state.texts[idx].lineSpacing = +e.target.value;')
 
+replace_once('  let previewT = TYPE_END_FRAME/(FPS*DURATION); // start the static editor view past the typing-in animation',
+             '  let previewT = 0; // start the preview at the beginning of the video')
+
 path.write_text(html, encoding="utf-8")
 print("Automatic two-line headline spacing applied")
