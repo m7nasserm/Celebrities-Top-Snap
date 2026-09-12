@@ -47,5 +47,16 @@ replace_once('        state.texts[idx].lineSpacing = +e.target.value;',
 replace_once('  let previewT = TYPE_END_FRAME/(FPS*DURATION); // start the static editor view past the typing-in animation',
              '  let previewT = 0; // start the preview at the beginning of the video')
 
+replace_once('  .center-img-btn:active{ transform:scale(.94); border-color:var(--accent); background:#F3EAFD; }',
+             '  .center-img-btn:active{ border-color:var(--accent); background:#F3EAFD; }')
+replace_once('''  .center-img-btn.pressed{ border-color:var(--accent); background:#F3EAFD; box-shadow:0 0 0 4px rgba(125,42,231,.18); animation:center-button-press .5s ease-out; }
+  @keyframes center-button-press{
+    0%{ transform:scale(.94); }
+    60%{ transform:scale(1.03); }
+    100%{ transform:scale(1); }
+  }
+  @media (prefers-reduced-motion:reduce){ .center-img-btn.pressed{ animation:none; } }''',
+             '  .center-img-btn.pressed{ border-color:var(--accent); background:#F3EAFD; box-shadow:0 0 0 4px rgba(125,42,231,.18); }')
+
 path.write_text(html, encoding="utf-8")
 print("Automatic two-line headline spacing applied")
