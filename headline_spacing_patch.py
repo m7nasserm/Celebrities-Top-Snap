@@ -69,5 +69,19 @@ replace_once('playBtn.textContent = "▶ تشغيل المعاينة";',
 replace_once('playBtn.textContent = "⏸ إيقاف مؤقت";',
              'playBtn.innerHTML = \'<span class="transport-icon" aria-hidden="true">⏸</span> إيقاف مؤقت\';')
 
+# 299 frames at 30 fps: 9 seconds and 29 frames of media.
+replace_once('  const W = 1080, H = 1920, FPS = 30, DURATION = 10;',
+             '  const W = 1080, H = 1920, FPS = 30, DURATION = 299 / FPS;')
+replace_once('<span class="time-label" id="timeLabel">0.0 / 10.0s</span>',
+             '<span class="time-label" id="timeLabel">0.00 / 9.97s</span>')
+replace_once('<input type="range" id="scrubber" min="0" max="300" step="1" value="45">',
+             '<input type="range" id="scrubber" min="0" max="299" step="1" value="0">')
+replace_once('timeLabel.textContent = secs.toFixed(1)+" / "+DURATION.toFixed(1)+"s";',
+             'timeLabel.textContent = secs.toFixed(2)+" / "+DURATION.toFixed(2)+"s";')
+replace_once('scrubber.value = Math.round(previewT*300);',
+             'scrubber.value = Math.round(previewT*299);')
+replace_once('previewT = (+e.target.value)/300;',
+             'previewT = (+e.target.value)/299;')
+
 path.write_text(html, encoding="utf-8")
 print("Automatic two-line headline spacing applied")
