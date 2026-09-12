@@ -44672,8 +44672,10 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
     }
     syncHeadlineLineSpacing();
     const headlineLayer = state.texts[0];
-    const headlineIsSingle = Boolean(headlineLayer.text.trim()) &&
-      wrapLines(headlineLayer.text, `${headlineLayer.size}px 'PFDinXBlack'`, maxWidth).length === 1;
+    const headlineLineCount = headlineLayer.text.trim() ?
+      wrapLines(headlineLayer.text, `${headlineLayer.size}px 'PFDinXBlack'`, maxWidth).length : 0;
+    const headlineIsSingle = headlineLineCount === 1;
+    const offsetSublineByFive = headlineLineCount === 2 && singleLineSublineOffset === 20;
     let y = TEXT_BOX.y + (sublineLayer && !sublineLayer.text.trim() ? 50 : headlineIsSingle ? singleLineSublineOffset : 0);
     ctx.direction = "rtl";
     ctx.textAlign = "center";
@@ -44689,6 +44691,7 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
       const fontStr = `${layer.size}px ${family}`;
       const lines = wrapLines(revealed, fontStr, maxWidth);
       const lineHeight = layer.size * 1.28 + (layer.lineSpacing||0);
+      if(idx === 1 && offsetSublineByFive) y += 5;
 
       ctx.font = fontStr;
       ctx.fillStyle = layer.color;
