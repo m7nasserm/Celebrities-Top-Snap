@@ -50,5 +50,29 @@ new='''  const swipeVideo = document.createElement("video");
   // preload preset background images'''
 s,n=re.subn(pat,new,s,count=1,flags=re.S)
 if n!=1: raise SystemExit('Swipe video source block not found')
+
+old='''  function drawSwipeIcon(){
+    if(!state.swipe.show || !swipeReady) return;
+    try{
+      ctx.drawImage(swipeVideo, SWIPE_RECT.x, SWIPE_RECT.y, SWIPE_RECT.w, SWIPE_RECT.h);
+    }catch(e){}
+  }'''
+new_draw='''  function drawSwipeIcon(){
+    if(!state.swipe.show || !swipeReady) return;
+    try{
+      // iOS browsers can decode the WebM alpha channel as opaque black.
+      // Screen compositing makes black contribute nothing while preserving
+      // the white swipe icon/text and their anti-aliased edges.
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      ctx.drawImage(swipeVideo, SWIPE_RECT.x, SWIPE_RECT.y, SWIPE_RECT.w, SWIPE_RECT.h);
+      ctx.restore();
+    }catch(e){
+      try{ ctx.restore(); }catch(_){}
+    }
+  }'''
+if old not in s: raise SystemExit('Swipe draw block not found')
+s=s.replace(old,new_draw,1)
+
 open(p,'w',encoding='utf-8').write(s)
-print('Mobile swipe video patch applied successfully')
+print('Mobile swipe video + transparent background patch applied successfully')
