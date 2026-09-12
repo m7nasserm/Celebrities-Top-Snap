@@ -59,7 +59,7 @@ replace_once('''  .center-img-btn.pressed{ border-color:var(--accent); backgroun
              '  .center-img-btn.pressed{ border-color:var(--accent); background:#F3EAFD; box-shadow:0 0 0 4px rgba(125,42,231,.18); }')
 
 replace_once('  .transport{ display:flex; gap:10px; align-items:center; }',
-             '  .transport{ display:flex; gap:10px; align-items:center; }\n  .transport .btn{ font-weight:500; }\n  .transport .transport-icon{ color:var(--accent); }')
+             '  .transport{ display:flex; gap:10px; align-items:center; }\n  .transport .btn{ font-weight:500; }\n  .transport .transport-icon{ color:var(--accent); }\n  #resetBtn .transport-icon{ font-size:24px; line-height:18px; }')
 replace_once('<button class="btn btn-ghost" id="playBtn">▶ تشغيل المعاينة</button>',
              '<button class="btn btn-ghost" id="playBtn"><span class="transport-icon" aria-hidden="true">▶</span> تشغيل المعاينة</button>')
 replace_once('<button class="btn btn-ghost" id="resetBtn">↺ البداية</button>',
