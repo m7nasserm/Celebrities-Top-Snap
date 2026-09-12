@@ -44636,6 +44636,31 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
     return [ revealCount(hLen, hStart, hEnd), revealCount(sLen, sStart, sEnd) ];
   }
 
+  // Save each slider's manually selected value so it can return when the
+  // headline fits on one line again.
+  const preferredTextLineSpacing = state.texts.map(layer => layer.lineSpacing);
+  let compactHeadlineSpacing = false;
+
+  function syncHeadlineLineSpacing(){
+    const headline = state.texts[0];
+    const headlineFont = `${headline.size}px 'PFDinXBlack'`;
+    const wraps = wrapLines(headline.text, headlineFont, TEXT_BOX.w).length > 1;
+    // On the first render, the text cards may not exist yet; update them once
+    // they are created, while avoiding DOM work during every export frame.
+    const firstSlider = document.querySelector('#textLayersWrap input[data-field="lineSpacing"]');
+    if(wraps === compactHeadlineSpacing && firstSlider && firstSlider.disabled === wraps) return;
+    compactHeadlineSpacing = wraps;
+    state.texts.forEach((layer, idx)=>{
+      layer.lineSpacing = wraps ? 0 : preferredTextLineSpacing[idx];
+      const slider = document.querySelector(`#textLayersWrap input[data-field="lineSpacing"][data-idx="${idx}"]`);
+      if(!slider) return;
+      slider.value = layer.lineSpacing;
+      slider.disabled = wraps;
+      const label = slider.closest('.field').querySelector('[data-out="lineSpacing"]');
+      if(label) label.textContent = layer.lineSpacing + 'px';
+    });
+  }
+
   function drawTextLayers(t){
     const maxWidth = TEXT_BOX.w;
     const centerX = TEXT_BOX.x + TEXT_BOX.w/2;
@@ -44646,6 +44671,7 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
       const fullSublineLines = wrapLines(sublineLayer.text, sublineFont, maxWidth);
       if(fullSublineLines.length === 1) singleLineSublineOffset = 20;
     }
+    syncHeadlineLineSpacing();
     let y = TEXT_BOX.y + singleLineSublineOffset;
     ctx.direction = "rtl";
     ctx.textAlign = "center";
@@ -44900,6 +44926,7 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
       });
       card.querySelector('[data-field="color"]').addEventListener("input", e=>{ state.texts[idx].color = e.target.value; renderCurrent(); });
       card.querySelector('[data-field="lineSpacing"]').addEventListener("input", e=>{
+        preferredTextLineSpacing[idx] = +e.target.value;
         state.texts[idx].lineSpacing = +e.target.value;
         card.querySelector('[data-out="lineSpacing"]').textContent = e.target.value+"px";
         renderCurrent();
