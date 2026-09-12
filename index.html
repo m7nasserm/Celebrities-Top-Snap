@@ -44676,7 +44676,7 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
       if(fullSublineLines.length === 1) singleLineSublineOffset = 20;
     }
     syncHeadlineLineSpacing();
-    let y = TEXT_BOX.y + singleLineSublineOffset;
+    let y = TEXT_BOX.y + (sublineLayer && !sublineLayer.text.trim() ? 45 : singleLineSublineOffset);
     ctx.direction = "rtl";
     ctx.textAlign = "center";
     ctx.textBaseline = "alphabetic";
