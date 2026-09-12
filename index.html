@@ -395,8 +395,8 @@
       </div>
 
       <div class="scrubber-row">
-        <span class="time-label" id="timeLabel">0.0 / 10.0s</span>
-        <input type="range" id="scrubber" min="0" max="300" step="1" value="45">
+        <span class="time-label" id="timeLabel">0.00 / 9.97s</span>
+        <input type="range" id="scrubber" min="0" max="299" step="1" value="0">
       </div>
 
       <div class="transport">
@@ -44315,7 +44315,7 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
 (function(){
   "use strict";
 
-  const W = 1080, H = 1920, FPS = 30, DURATION = 10;
+  const W = 1080, H = 1920, FPS = 30, DURATION = 299 / FPS;
   const FRAME = { x: 148, y: 176, w: 789, h: 1180 };
   const TEXT_BOX = { x: 80, y: 1351, w: 919, h: 299 };
   const TYPE_START_FRAME = 15;
@@ -45150,8 +45150,8 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
 
   function updateTimeUI(){
     const secs = previewT*DURATION;
-    timeLabel.textContent = secs.toFixed(1)+" / "+DURATION.toFixed(1)+"s";
-    scrubber.value = Math.round(previewT*300);
+    timeLabel.textContent = secs.toFixed(2)+" / "+DURATION.toFixed(2)+"s";
+    scrubber.value = Math.round(previewT*299);
   }
 
   function seekSwipeTo(t){
@@ -45164,7 +45164,7 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
 
   scrubber.addEventListener("input", e=>{
     if(playing) return;
-    previewT = (+e.target.value)/300;
+    previewT = (+e.target.value)/299;
     seekSwipeTo(previewT);
     render(previewT);
     updateTimeUI();
