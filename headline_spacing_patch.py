@@ -44,7 +44,7 @@ replace_once('    let y = TEXT_BOX.y + singleLineSublineOffset;',
     const headlineLayer = state.texts[0];
     const headlineIsSingle = Boolean(headlineLayer.text.trim()) &&
       wrapLines(headlineLayer.text, `${headlineLayer.size}px 'PFDinXBlack'`, maxWidth).length === 1;
-    let y = TEXT_BOX.y + (sublineLayer && !sublineLayer.text.trim() ? 45 : headlineIsSingle ? singleLineSublineOffset : 0);''')
+    let y = TEXT_BOX.y + (sublineLayer && !sublineLayer.text.trim() ? 50 : headlineIsSingle ? singleLineSublineOffset : 0);''')
 replace_once('        state.texts[idx].lineSpacing = +e.target.value;',
              '        preferredTextLineSpacing[idx] = +e.target.value;\n        state.texts[idx].lineSpacing = +e.target.value;')
 
