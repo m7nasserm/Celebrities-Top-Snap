@@ -28,6 +28,12 @@ jobs:
           grep -F 'grid-template-columns:repeat(7,minmax(0,1fr))' public/index.html
           grep -F 'webkit-playsinline' public/index.html
           grep -F 'requestVideoFrameCallback' public/index.html
+      - name: Upload downloadable HTML
+        uses: actions/upload-artifact@v4
+        with:
+          name: celebrities-top-snap-html
+          path: public/index.html
+          retention-days: 90
       - uses: actions/upload-pages-artifact@v4
         with:
           path: public
