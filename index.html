@@ -223,14 +223,8 @@
   }
   .settings-row > .btn{ flex:none; white-space:nowrap; padding:14px 22px; }
   .anim-sq svg, .center-img-btn svg{ width:28px; height:28px; stroke:currentColor; stroke-width:2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
-  .center-img-btn:active{ transform:scale(.94); border-color:var(--accent); background:#F3EAFD; }
-  .center-img-btn.pressed{ border-color:var(--accent); background:#F3EAFD; box-shadow:0 0 0 4px rgba(125,42,231,.18); animation:center-button-press .5s ease-out; }
-  @keyframes center-button-press{
-    0%{ transform:scale(.94); }
-    60%{ transform:scale(1.03); }
-    100%{ transform:scale(1); }
-  }
-  @media (prefers-reduced-motion:reduce){ .center-img-btn.pressed{ animation:none; } }
+  .center-img-btn:active{ border-color:var(--accent); background:#F3EAFD; }
+  .center-img-btn.pressed{ border-color:var(--accent); background:#F3EAFD; box-shadow:0 0 0 4px rgba(125,42,231,.18); }
 
   .upload-row{ display:flex; align-items:stretch; gap:10px; }
   .upload-row .upload-box{ flex:1; max-width:60%; min-width:0; }
