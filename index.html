@@ -44386,7 +44386,7 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
   };
 
   let playing = false;
-  let previewT = TYPE_END_FRAME/(FPS*DURATION); // start the static editor view past the typing-in animation
+  let previewT = 0; // start the preview at the beginning of the video
   let rafId = null;
   let exporting = false;
 
