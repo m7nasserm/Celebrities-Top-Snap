@@ -44638,23 +44638,28 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
   // Save each slider's manually selected value so it can return when the
   // headline fits on one line again.
   const preferredTextLineSpacing = state.texts.map(layer => layer.lineSpacing);
-  let compactHeadlineSpacing = false;
+  let automaticSpacingMode = '';
 
   function syncHeadlineLineSpacing(){
     const headline = state.texts[0];
     const headlineFont = `${headline.size}px 'PFDinXBlack'`;
     const wraps = wrapLines(headline.text, headlineFont, TEXT_BOX.w).length > 1;
+    const subline = state.texts[1];
+    const sublineFont = `${subline.size}px 'PFDinMedium'`;
+    const bothSingle = Boolean(headline.text.trim() && subline.text.trim()) &&
+      !wraps && wrapLines(subline.text, sublineFont, TEXT_BOX.w).length === 1;
+    const mode = wraps ? 'wrapped' : bothSingle ? 'single' : 'manual';
     // On the first render, the text cards may not exist yet; update them once
     // they are created, while avoiding DOM work during every export frame.
     const firstSlider = document.querySelector('#textLayersWrap input[data-field="lineSpacing"]');
-    if(wraps === compactHeadlineSpacing && firstSlider && firstSlider.disabled === wraps) return;
-    compactHeadlineSpacing = wraps;
+    if(mode === automaticSpacingMode && firstSlider && firstSlider.disabled === (mode !== 'manual')) return;
+    automaticSpacingMode = mode;
     state.texts.forEach((layer, idx)=>{
-      layer.lineSpacing = wraps ? 0 : preferredTextLineSpacing[idx];
+      layer.lineSpacing = wraps ? 0 : bothSingle && idx === 0 ? 20 : preferredTextLineSpacing[idx];
       const slider = document.querySelector(`#textLayersWrap input[data-field="lineSpacing"][data-idx="${idx}"]`);
       if(!slider) return;
       slider.value = layer.lineSpacing;
-      slider.disabled = wraps;
+      slider.disabled = wraps || (bothSingle && idx === 0);
       const label = slider.closest('.field').querySelector('[data-out="lineSpacing"]');
       if(label) label.textContent = layer.lineSpacing + 'px';
     });
