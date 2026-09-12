@@ -88,6 +88,8 @@
   .time-label{font-size:14.375px;color:var(--muted); font-variant-numeric: tabular-nums; min-width:64px; text-align:center; direction:ltr; unicode-bidi:isolate;}
 
   .transport{ display:flex; gap:10px; align-items:center; }
+  .transport .btn{ font-weight:500; }
+  .transport .transport-icon{ color:var(--accent); }
   .btn{
     border:none; border-radius:100px; padding:10px 18px;
     font-family:inherit; font-weight:700; font-size:16.875px;
@@ -397,8 +399,8 @@
       </div>
 
       <div class="transport">
-        <button class="btn btn-ghost" id="playBtn">▶ تشغيل المعاينة</button>
-        <button class="btn btn-ghost" id="resetBtn">↺ البداية</button>
+        <button class="btn btn-ghost" id="playBtn"><span class="transport-icon" aria-hidden="true">▶</span> تشغيل المعاينة</button>
+        <button class="btn btn-ghost" id="resetBtn"><span class="transport-icon" aria-hidden="true">↺</span> البداية</button>
       </div>
 
       <button class="btn btn-primary btn-export" id="exportBtn">⬇ تصدير الفيديو</button>
@@ -45169,7 +45171,7 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
 
   function stopPreview(){
     playing = false;
-    playBtn.textContent = "▶ تشغيل المعاينة";
+    playBtn.innerHTML = '<span class="transport-icon" aria-hidden="true">▶</span> تشغيل المعاينة';
     if(rafId) cancelAnimationFrame(rafId);
     if(state.music.el){ state.music.el.pause(); }
     swipeVideo.pause();
@@ -45177,7 +45179,7 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
 
   function startPreview(){
     playing = true;
-    playBtn.textContent = "⏸ إيقاف مؤقت";
+    playBtn.innerHTML = '<span class="transport-icon" aria-hidden="true">⏸</span> إيقاف مؤقت';
 
     // Keep the selected soundtrack playing continuously on mobile. Previously
     // the RAF loop repeatedly corrected audio.currentTime whenever drift exceeded
