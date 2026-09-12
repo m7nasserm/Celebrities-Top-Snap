@@ -91,5 +91,138 @@ new_draw='''  function drawSwipeIcon(){
 if old not in s: raise SystemExit('Swipe draw block not found')
 s=s.replace(old,new_draw,1)
 
+# Mobile Safari is much more reliable when the selected music is fully preloaded
+# instead of metadata-only. This only changes preview loading; export still uses
+# the same deterministic decoded audio path.
+s=s.replace('audio.preload = "metadata";', 'audio.preload = "auto";', 2)
+
+old_playback='''  function stopPreview(){
+    playing = false;
+    playBtn.textContent = "▶ تشغيل المعاينة";
+    if(rafId) cancelAnimationFrame(rafId);
+    if(state.music.el){ state.music.el.pause(); }
+    swipeVideo.pause();
+  }
+
+  function startPreview(){
+    playing = true;
+    playBtn.textContent = "⏸ إيقاف مؤقت";
+    const startWall = performance.now() - previewT*DURATION*1000;
+
+    if(state.music.el){
+      state.music.el.currentTime = state.music.start + previewT*DURATION;
+      state.music.el.volume = state.music.volume;
+      state.music.el.play().catch(()=>{});
+    }
+    if(swipeReady){
+      swipeVideo.currentTime = previewT*DURATION;
+      swipeVideo.play().catch(()=>{});
+    }
+
+    function tick(now){
+      if(!playing) return;
+      let elapsed = (now-startWall)/1000;
+      let t = elapsed/DURATION;
+
+      if(t >= 1){
+        previewT = 1;
+        render(previewT);
+        updateTimeUI();
+        stopPreview();
+        return;
+      }
+
+      previewT = t;
+      render(previewT);
+      updateTimeUI();
+      if(state.music.el && Math.abs(state.music.el.currentTime - (state.music.start+t*DURATION)) > 0.35){
+        state.music.el.currentTime = state.music.start + t*DURATION;
+      }
+      rafId = requestAnimationFrame(tick);
+    }
+    rafId = requestAnimationFrame(tick);
+  }'''
+
+new_playback='''  function stopPreview(){
+    playing = false;
+    playBtn.textContent = "▶ تشغيل المعاينة";
+    if(rafId) cancelAnimationFrame(rafId);
+    if(state.music.el){ state.music.el.pause(); }
+    swipeVideo.pause();
+  }
+
+  function startPreview(){
+    playing = true;
+    playBtn.textContent = "⏸ إيقاف مؤقت";
+
+    // Keep the selected soundtrack playing continuously on mobile. Previously
+    // the RAF loop repeatedly corrected audio.currentTime whenever drift exceeded
+    // 350ms. Safari turns those corrections into audible gaps. Seek only once at
+    // preview start, then let audio be the playback clock while it is active.
+    stopPreviewAudio();
+    const startPreviewSeconds = previewT * DURATION;
+    const startWall = performance.now();
+    const audioEl = state.music.el || null;
+    let audioClockSeen = false;
+    let lastAudioSeconds = startPreviewSeconds;
+    let lastAudioWall = startWall;
+
+    if(audioEl){
+      try{
+        audioEl.currentTime = state.music.start + startPreviewSeconds;
+        audioEl.volume = state.music.volume;
+        audioEl.play().catch(()=>{});
+      }catch(e){}
+    }
+    if(swipeReady){
+      try{
+        swipeVideo.currentTime = startPreviewSeconds;
+        swipeVideo.play().catch(()=>{});
+      }catch(e){}
+    }
+
+    function tick(now){
+      if(!playing) return;
+
+      let elapsed;
+      if(audioEl && !audioEl.paused && !audioEl.ended && Number.isFinite(audioEl.currentTime)){
+        const audioSeconds = audioEl.currentTime - state.music.start;
+        if(audioSeconds >= -0.05 && audioSeconds <= DURATION + 0.5){
+          elapsed = Math.max(0, audioSeconds);
+          audioClockSeen = true;
+          lastAudioSeconds = elapsed;
+          lastAudioWall = now;
+        }
+      }
+
+      // No music, failed playback, or the track ended before the 10-second
+      // preview: continue smoothly from the most recent audio position.
+      if(elapsed == null){
+        elapsed = audioClockSeen
+          ? lastAudioSeconds + (now - lastAudioWall)/1000
+          : startPreviewSeconds + (now - startWall)/1000;
+      }
+
+      const t = elapsed / DURATION;
+      if(t >= 1){
+        previewT = 1;
+        render(previewT);
+        updateTimeUI();
+        stopPreview();
+        return;
+      }
+
+      previewT = Math.max(0, t);
+      render(previewT);
+      updateTimeUI();
+      rafId = requestAnimationFrame(tick);
+    }
+    rafId = requestAnimationFrame(tick);
+  }'''
+
+if old_playback not in s:
+    raise SystemExit('Preview playback block not found')
+s=s.replace(old_playback,new_playback,1)
+
 open(p,'w',encoding='utf-8').write(s)
-print('Mobile swipe video chroma-key transparency patch applied successfully')
+print('Mobile swipe transparency and stable preview audio patch applied successfully')
