@@ -83,5 +83,13 @@ replace_once('scrubber.value = Math.round(previewT*300);',
 replace_once('previewT = (+e.target.value)/300;',
              'previewT = (+e.target.value)/299;')
 
+# Embed the supplied logo to keep the published site self-contained. Its alpha
+# channel masks the existing purple gradient so the artwork matches the theme.
+logo_data = Path(__file__).with_name('mbc-logo.b64').read_text(encoding='ascii').strip()
+replace_once('  header h1{font-size:22.5px;',
+             '  .brand-logo{ flex:none; margin-inline-start:auto; width:clamp(86px, 11vw, 126px); aspect-ratio:800 / 350; background:var(--accent-grad); --logo-mask:url("data:image/png;base64,' + logo_data + '"); -webkit-mask:var(--logo-mask) center / contain no-repeat; mask:var(--logo-mask) center / contain no-repeat; }\n  header h1{font-size:22.5px;')
+replace_once('  </header>\n\n  <main>',
+             '    <div class="brand-logo" role="img" aria-label="MBC"></div>\n  </header>\n\n  <main>')
+
 path.write_text(html, encoding="utf-8")
 print("Automatic two-line headline spacing applied")
