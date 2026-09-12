@@ -42,9 +42,13 @@ replace_once('  function drawTextLayers(t){', '''  // Save each slider's manuall
 replace_once('    let y = TEXT_BOX.y + singleLineSublineOffset;',
              '''    syncHeadlineLineSpacing();
     const headlineLayer = state.texts[0];
-    const headlineIsSingle = Boolean(headlineLayer.text.trim()) &&
-      wrapLines(headlineLayer.text, `${headlineLayer.size}px 'PFDinXBlack'`, maxWidth).length === 1;
+    const headlineLineCount = headlineLayer.text.trim() ?
+      wrapLines(headlineLayer.text, `${headlineLayer.size}px 'PFDinXBlack'`, maxWidth).length : 0;
+    const headlineIsSingle = headlineLineCount === 1;
+    const offsetSublineByFive = headlineLineCount === 2 && singleLineSublineOffset === 20;
     let y = TEXT_BOX.y + (sublineLayer && !sublineLayer.text.trim() ? 50 : headlineIsSingle ? singleLineSublineOffset : 0);''')
+replace_once('      const lineHeight = layer.size * 1.28 + (layer.lineSpacing||0);',
+             '      const lineHeight = layer.size * 1.28 + (layer.lineSpacing||0);\n      if(idx === 1 && offsetSublineByFive) y += 5;')
 replace_once('        state.texts[idx].lineSpacing = +e.target.value;',
              '        preferredTextLineSpacing[idx] = +e.target.value;\n        state.texts[idx].lineSpacing = +e.target.value;')
 
