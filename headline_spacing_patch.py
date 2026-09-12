@@ -45,7 +45,7 @@ replace_once('  function drawTextLayers(t){', '''  // Save each slider's manuall
   function drawTextLayers(t){''')
 
 replace_once('    let y = TEXT_BOX.y + singleLineSublineOffset;',
-             '    syncHeadlineLineSpacing();\n    let y = TEXT_BOX.y + singleLineSublineOffset;')
+             '    syncHeadlineLineSpacing();\n    let y = TEXT_BOX.y + (sublineLayer && !sublineLayer.text.trim() ? 45 : singleLineSublineOffset);')
 replace_once('        state.texts[idx].lineSpacing = +e.target.value;',
              '        preferredTextLineSpacing[idx] = +e.target.value;\n        state.texts[idx].lineSpacing = +e.target.value;')
 
