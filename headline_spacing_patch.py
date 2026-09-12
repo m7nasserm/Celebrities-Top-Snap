@@ -15,28 +15,23 @@ def replace_once(old, new):
 replace_once('  function drawTextLayers(t){', '''  // Save each slider's manually selected value so it can return when the
   // headline fits on one line again.
   const preferredTextLineSpacing = state.texts.map(layer => layer.lineSpacing);
-  let automaticSpacingMode = '';
+  let compactHeadlineSpacing = false;
 
   function syncHeadlineLineSpacing(){
     const headline = state.texts[0];
     const headlineFont = `${headline.size}px 'PFDinXBlack'`;
     const wraps = wrapLines(headline.text, headlineFont, TEXT_BOX.w).length > 1;
-    const subline = state.texts[1];
-    const sublineFont = `${subline.size}px 'PFDinMedium'`;
-    const bothSingle = Boolean(headline.text.trim() && subline.text.trim()) &&
-      !wraps && wrapLines(subline.text, sublineFont, TEXT_BOX.w).length === 1;
-    const mode = wraps ? 'wrapped' : bothSingle ? 'single' : 'manual';
     // On the first render, the text cards may not exist yet; update them once
     // they are created, while avoiding DOM work during every export frame.
     const firstSlider = document.querySelector('#textLayersWrap input[data-field="lineSpacing"]');
-    if(mode === automaticSpacingMode && firstSlider && firstSlider.disabled === (mode !== 'manual')) return;
-    automaticSpacingMode = mode;
+    if(wraps === compactHeadlineSpacing && firstSlider && firstSlider.disabled === wraps) return;
+    compactHeadlineSpacing = wraps;
     state.texts.forEach((layer, idx)=>{
-      layer.lineSpacing = wraps ? 0 : bothSingle && idx === 0 ? 20 : preferredTextLineSpacing[idx];
+      layer.lineSpacing = wraps ? 0 : preferredTextLineSpacing[idx];
       const slider = document.querySelector(`#textLayersWrap input[data-field="lineSpacing"][data-idx="${idx}"]`);
       if(!slider) return;
       slider.value = layer.lineSpacing;
-      slider.disabled = wraps || (bothSingle && idx === 0);
+      slider.disabled = wraps;
       const label = slider.closest('.field').querySelector('[data-out="lineSpacing"]');
       if(label) label.textContent = layer.lineSpacing + 'px';
     });
@@ -45,7 +40,11 @@ replace_once('  function drawTextLayers(t){', '''  // Save each slider's manuall
   function drawTextLayers(t){''')
 
 replace_once('    let y = TEXT_BOX.y + singleLineSublineOffset;',
-             '    syncHeadlineLineSpacing();\n    let y = TEXT_BOX.y + (sublineLayer && !sublineLayer.text.trim() ? 45 : singleLineSublineOffset);')
+             '''    syncHeadlineLineSpacing();
+    const headlineLayer = state.texts[0];
+    const headlineIsSingle = Boolean(headlineLayer.text.trim()) &&
+      wrapLines(headlineLayer.text, `${headlineLayer.size}px 'PFDinXBlack'`, maxWidth).length === 1;
+    let y = TEXT_BOX.y + (sublineLayer && !sublineLayer.text.trim() ? 45 : headlineIsSingle ? singleLineSublineOffset : 0);''')
 replace_once('        state.texts[idx].lineSpacing = +e.target.value;',
              '        preferredTextLineSpacing[idx] = +e.target.value;\n        state.texts[idx].lineSpacing = +e.target.value;')
 
