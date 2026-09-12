@@ -15,13 +15,17 @@ new='''  const swipeVideo = document.createElement("video");
   let swipeReady = false;
   let swipePrimed = false;
 
+  // iOS can decode transparent WebM pixels as opaque black. Render the video
+  // into this small helper canvas and remove dark pixels before compositing it.
+  const swipeKeyCanvas = document.createElement("canvas");
+  swipeKeyCanvas.width = Math.max(1, Math.round(SWIPE_RECT.w));
+  swipeKeyCanvas.height = Math.max(1, Math.round(SWIPE_RECT.h));
+  const swipeKeyCtx = swipeKeyCanvas.getContext("2d", { willReadFrequently:true });
+
   function markSwipeReady(){
     if(swipeVideo.readyState < 2) return;
     swipeReady = true;
 
-    // Mobile Safari/Chrome can report loaded metadata/data before a drawable
-    // frame is actually available to canvas. Prime a tiny seek so a decoded
-    // frame exists, then redraw as soon as that seek/frame completes.
     if(!swipePrimed){
       swipePrimed = true;
       try{
@@ -60,19 +64,32 @@ old='''  function drawSwipeIcon(){
 new_draw='''  function drawSwipeIcon(){
     if(!state.swipe.show || !swipeReady) return;
     try{
-      // iOS browsers can decode the WebM alpha channel as opaque black.
-      // Screen compositing makes black contribute nothing while preserving
-      // the white swipe icon/text and their anti-aliased edges.
-      ctx.save();
-      ctx.globalCompositeOperation = "screen";
-      ctx.drawImage(swipeVideo, SWIPE_RECT.x, SWIPE_RECT.y, SWIPE_RECT.w, SWIPE_RECT.h);
-      ctx.restore();
+      const w = swipeKeyCanvas.width, h = swipeKeyCanvas.height;
+      swipeKeyCtx.clearRect(0,0,w,h);
+      swipeKeyCtx.drawImage(swipeVideo, 0, 0, w, h);
+
+      const frame = swipeKeyCtx.getImageData(0,0,w,h);
+      const px = frame.data;
+      for(let i=0;i<px.length;i+=4){
+        const r=px[i], g=px[i+1], b=px[i+2];
+        const lum = Math.max(r,g,b);
+        // Full transparency for black/dark background; feather the edge so
+        // anti-aliased white icon/text remains smooth instead of jagged.
+        if(lum <= 42){
+          px[i+3] = 0;
+        } else if(lum < 110){
+          px[i+3] = Math.round(px[i+3] * (lum-42) / 68);
+        }
+      }
+      swipeKeyCtx.putImageData(frame,0,0);
+      ctx.drawImage(swipeKeyCanvas, SWIPE_RECT.x, SWIPE_RECT.y, SWIPE_RECT.w, SWIPE_RECT.h);
     }catch(e){
-      try{ ctx.restore(); }catch(_){}
+      // Never fall back to the raw frame here: on iOS that is exactly what
+      // produces the opaque black rectangle.
     }
   }'''
 if old not in s: raise SystemExit('Swipe draw block not found')
 s=s.replace(old,new_draw,1)
 
 open(p,'w',encoding='utf-8').write(s)
-print('Mobile swipe video + transparent background patch applied successfully')
+print('Mobile swipe video chroma-key transparency patch applied successfully')
