@@ -15,11 +15,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Assemble and verify site
+      - name: Assemble, verify, and apply reviewed updates
         run: |
           mkdir -p public
           cat site-parts/*.part > public/index.html
           echo "ca259b97195ff7e56ce7099a11fcee5e5126b98241d189a554358ef7c165fb43  public/index.html" | sha256sum -c -
+          python3 deploy_patch.py public/index.html
       - uses: actions/upload-pages-artifact@v4
         with:
           path: public
