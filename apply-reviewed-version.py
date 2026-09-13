@@ -22,7 +22,8 @@ old_headers = [
     '''    <div>\n      <h1>Celebrities Top Snap</h1>\n      <p>صورة + نص + موسيقى ← فيديو جاهز للنشر بمقاس ٩:١٦</p>\n    </div>''',
     '''    <div>\n      <h1>Celebrities Top Snap</h1>\n      <p>صورة + نص + موسيقى ← فيديو جاهز للنشر بمقاس 9:16</p>\n    </div>'''
 ]
-new_header = '''    <div>\n      <nav class="tool-tabs" aria-label="Video tools"><a href="screenshot.html">Screenshot Top Snap</a><span aria-hidden="true">|</span><a href="./" aria-current="page">Celebrities Top Snap</a></nav>\n    </div>'''
+# Swapped visual positions: Celebrities first, Screenshot second.
+new_header = '''    <div>\n      <nav class="tool-tabs" aria-label="Video tools"><a href="./" aria-current="page">Celebrities Top Snap</a><span aria-hidden="true">|</span><a href="screenshot.html">Screenshot Top Snap</a></nav>\n    </div>'''
 for old_header in old_headers:
     if old_header in text:
         text = text.replace(old_header, new_header, 1)
@@ -30,6 +31,9 @@ for old_header in old_headers:
 else:
     if 'class="tool-tabs"' not in text:
         raise SystemExit('Expected Celebrities header block not found')
+    old_nav = '<nav class="tool-tabs" aria-label="Video tools"><a href="screenshot.html">Screenshot Top Snap</a><span aria-hidden="true">|</span><a href="./" aria-current="page">Celebrities Top Snap</a></nav>'
+    swapped_nav = '<nav class="tool-tabs" aria-label="Video tools"><a href="./" aria-current="page">Celebrities Top Snap</a><span aria-hidden="true">|</span><a href="screenshot.html">Screenshot Top Snap</a></nav>'
+    text = text.replace(old_nav, swapped_nav, 1)
     text = text.replace('      <p>صورة + نص + موسيقى ← فيديو جاهز للنشر بمقاس ٩:١٦</p>\n', '', 1)
     text = text.replace('      <p>صورة + نص + موسيقى ← فيديو جاهز للنشر بمقاس 9:16</p>\n', '', 1)
 
