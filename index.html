@@ -350,6 +350,10 @@
   .upload-box input{ position:absolute; inset:0; opacity:0; cursor:pointer; }
   .file-chip{ font-size:15px; color:var(--good); margin-top:4px; font-weight:700; }
 
+  .text-layout-suggestion{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-top:12px; padding:10px 12px; border:1px solid #d5cff0; border-radius:10px; background:#F3EAFD; color:var(--text); font-size:14px; line-height:1.5; }
+  .text-layout-suggestion[hidden],.text-layout-suggestion button[hidden]{ display:none; }
+  .text-layout-suggestion button{ flex:none; border:1px solid var(--accent); background:var(--panel); color:var(--accent); border-radius:8px; padding:7px 10px; font:600 14px 'Tajawal',sans-serif; cursor:pointer; }
+  .text-layout-suggestion button:hover{ background:var(--panel-2); }
   .text-layer-card{
     border:1.5px solid var(--line); border-radius:14px; padding:14px; background:var(--panel-2);
     display:flex; flex-direction:column; gap:10px; position:relative;
@@ -506,6 +510,10 @@
         <section class="stack-section">
           <label class="section-title">النص</label>
           <div id="textLayersWrap" class="text-columns"></div>
+          <div id="textLayoutSuggestion" class="text-layout-suggestion" hidden>
+            <span id="textSuggestionMessage">اقتراح: عنوان بسطر واحد ونص فرعي بسطرين — حجم 63/60 وتباعد 20/15 بكسل</span>
+            <button type="button" id="applyTextLayoutSuggestion">تطبيق الاقتراح</button>
+          </div>
         </section>
 
         <!-- MUSIC -->
@@ -45222,6 +45230,56 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
     input.before(stepper);
     stepper.append(makeButton(-1, 'تقليل'), input, makeButton(1, 'زيادة'));
   });
+
+  // Optional 2+2 to 1+2 text layout. Attach after the slider controls so
+  // suggestion failures cannot prevent their creation.
+  const textSuggestion = document.getElementById('textLayoutSuggestion');
+  const textSuggestionMessage = document.getElementById('textSuggestionMessage');
+  const applyTextSuggestion = document.getElementById('applyTextLayoutSuggestion');
+  function updateTextSuggestion(){
+    const [headline, subline] = state.texts;
+    if(!headline?.text?.trim() || !subline?.text?.trim()){
+      textSuggestion.hidden = true;
+      return;
+    }
+    const lines = (layer, size, font) => wrapLines(layer.text, `${size}px '${font}'`, TEXT_BOX.w).length;
+    const fits = lines(headline, headline.size, 'PFDinXBlack') === 2 &&
+      lines(subline, subline.size, 'PFDinMedium') === 2 &&
+      lines(headline, 63, 'PFDinXBlack') === 1 &&
+      lines(subline, 60, 'PFDinMedium') === 2;
+    textSuggestion.hidden = !fits;
+    if(fits){
+      textSuggestionMessage.textContent = 'اقتراح: عنوان بسطر واحد ونص فرعي بسطرين — حجم 63/60 وتباعد 20/15 بكسل';
+      applyTextSuggestion.hidden = false;
+    }
+  }
+  textLayersWrap.addEventListener('input', event=>{
+    if(event.target.matches('textarea[data-field="text"],input[data-field="size"]')) updateTextSuggestion();
+  });
+  applyTextSuggestion.addEventListener('click', ()=>{
+    if(textSuggestion.hidden) return;
+    const changes = [
+      [0, 'size', 63], [1, 'size', 60],
+      [0, 'lineSpacing', 20], [1, 'lineSpacing', 15]
+    ];
+    const controls = changes.map(([idx, field]) =>
+      textLayersWrap.querySelector(`input[data-field="${field}"][data-idx="${idx}"]`));
+    if(controls.some(control => !control)){
+      textSuggestionMessage.textContent = 'تعذّر تطبيق الاقتراح؛ يرجى إعادة تحميل الصفحة';
+      return;
+    }
+    changes.forEach(([, , value], idx)=>{
+      controls[idx].value = String(value);
+      controls[idx].dispatchEvent(new Event('input', {bubbles:true}));
+    });
+    textLayersWrap.querySelectorAll('.text-layer-card').forEach(card=>{
+      if(!card.querySelector('.adv-body').classList.contains('open')) card.querySelector('.adv-toggle').click();
+    });
+    textSuggestion.hidden = false;
+    textSuggestionMessage.textContent = '✓ تم تطبيق حجم 63/60 وتباعد 20/15 بكسل — يمكنك تعديل القيم يدوياً';
+    applyTextSuggestion.hidden = true;
+  });
+  document.fonts.ready.then(updateTextSuggestion).catch(()=>{});
 
   /* ---------------- playback ---------------- */
   const scrubber = document.getElementById("scrubber");
