@@ -15,6 +15,7 @@ def replace_once(old, new):
 replace_once('  function drawTextLayers(t){', '''  // Save each slider's manually selected value so it can return when the
   // headline fits on one line again.
   const preferredTextLineSpacing = state.texts.map(layer => layer.lineSpacing);
+  const userAdjustedLineSpacing = state.texts.map(() => false);
   let compactHeadlineSpacing = false;
 
   function syncHeadlineLineSpacing(){
@@ -24,14 +25,14 @@ replace_once('  function drawTextLayers(t){', '''  // Save each slider's manuall
     // On the first render, the text cards may not exist yet; update them once
     // they are created, while avoiding DOM work during every export frame.
     const firstSlider = document.querySelector('#textLayersWrap input[data-field="lineSpacing"]');
-    if(wraps === compactHeadlineSpacing && firstSlider && firstSlider.disabled === wraps) return;
+    if(wraps === compactHeadlineSpacing && firstSlider) return;
     compactHeadlineSpacing = wraps;
     state.texts.forEach((layer, idx)=>{
-      layer.lineSpacing = wraps ? 0 : preferredTextLineSpacing[idx];
+      layer.lineSpacing = wraps && !userAdjustedLineSpacing[idx] ? 0 : preferredTextLineSpacing[idx];
       const slider = document.querySelector(`#textLayersWrap input[data-field="lineSpacing"][data-idx="${idx}"]`);
       if(!slider) return;
       slider.value = layer.lineSpacing;
-      slider.disabled = wraps;
+      slider.disabled = false;
       const label = slider.closest('.field').querySelector('[data-out="lineSpacing"]');
       if(label) label.textContent = layer.lineSpacing + 'px';
     });
@@ -49,62 +50,8 @@ replace_once('    let y = TEXT_BOX.y + singleLineSublineOffset;',
     let y = TEXT_BOX.y + (sublineLayer && !sublineLayer.text.trim() ? 50 : headlineIsSingle ? singleLineSublineOffset : 0);''')
 replace_once('      const lineHeight = layer.size * 1.28 + (layer.lineSpacing||0);',
              '      const lineHeight = layer.size * 1.28 + (layer.lineSpacing||0);\n      if(idx === 1 && offsetSublineByFive) y += 5;')
-
-replace_once('          <div id="textLayersWrap" class="text-columns"></div>',
-             '''          <div id="textLayersWrap" class="text-columns"></div>
-          <div id="textLayoutSuggestion" class="text-layout-suggestion" hidden>
-            <span>اقتراح تنسيق: عنوان بسطر واحد ونص فرعي بسطرين — الحجم 63/60 والتباعد 20/15 بكسل</span>
-            <button type="button" id="applyTextLayoutSuggestion">تطبيق الاقتراح</button>
-          </div>''')
-replace_once('  .text-layer-card{', '''  .text-layout-suggestion{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:12px; padding:10px 12px; border:1px solid #d5cff0; border-radius:10px; background:#F3EAFD; color:var(--text); font-size:14px; line-height:1.5; }
-  .text-layout-suggestion[hidden]{ display:none; }
-  .text-layout-suggestion button{ flex:none; border:1px solid var(--accent); background:var(--panel); color:var(--accent); border-radius:8px; padding:7px 10px; font:600 14px 'Tajawal',sans-serif; cursor:pointer; }
-  .text-layout-suggestion button:hover{ background:var(--panel-2); }
-  @media (max-width:700px){ .text-layout-suggestion{ flex-wrap:wrap; } }
-  .text-layer-card{''')
-
-replace_once('  const textLayersWrap = document.getElementById("textLayersWrap");', '''  const textLayersWrap = document.getElementById("textLayersWrap");
-  const textLayoutSuggestion = document.getElementById("textLayoutSuggestion");
-  function updateTextLayoutSuggestion(){
-    const [headline, subline] = state.texts;
-    if(!headline.text.trim() || !subline.text.trim()){
-      textLayoutSuggestion.hidden = true;
-      return;
-    }
-    const count = (layer, size, family) =>
-      wrapLines(layer.text, `${size}px '${family}'`, TEXT_BOX.w).length;
-    textLayoutSuggestion.hidden = !(
-      count(headline, headline.size, 'PFDinXBlack') === 2 &&
-      count(subline, subline.size, 'PFDinMedium') === 2 &&
-      count(headline, 63, 'PFDinXBlack') === 1 &&
-      count(subline, 60, 'PFDinMedium') === 2
-    );
-  }
-  document.getElementById("applyTextLayoutSuggestion").addEventListener("click", ()=>{
-    if(textLayoutSuggestion.hidden) return;
-    state.texts.forEach((layer, idx)=>{
-      layer.size = idx === 0 ? 63 : 60;
-      layer.lineSpacing = idx === 0 ? 20 : 15;
-      preferredTextLineSpacing[idx] = layer.lineSpacing;
-      userAdjustedLineSpacing[idx] = true;
-      const card = textLayersWrap.children[idx];
-      for(const field of ['size', 'lineSpacing']){
-        card.querySelector(`[data-field="${field}"]`).value = layer[field];
-        card.querySelector(`[data-out="${field}"]`).textContent = layer[field] + 'px';
-      }
-    });
-    renderCurrent();
-    updateTextLayoutSuggestion();
-  });''')
-
-replace_once('card.querySelector(\'[data-field="text"]\').addEventListener("input", e=>{ state.texts[idx].text = e.target.value; renderCurrent(); });',
-             'card.querySelector(\'[data-field="text"]\').addEventListener("input", e=>{ state.texts[idx].text = e.target.value; renderCurrent(); updateTextLayoutSuggestion(); });')
-replace_once('        card.querySelector(\'[data-out="size"]\').textContent = e.target.value+"px";\n        renderCurrent();',
-             '        card.querySelector(\'[data-out="size"]\').textContent = e.target.value+"px";\n        renderCurrent();\n        updateTextLayoutSuggestion();')
-replace_once('  renderTextLayers();\n\n  /* ---------------- music controls ---------------- */',
-             '  renderTextLayers();\n  updateTextLayoutSuggestion();\n\n  /* ---------------- music controls ---------------- */')
 replace_once('        state.texts[idx].lineSpacing = +e.target.value;',
-             '        preferredTextLineSpacing[idx] = +e.target.value;\n        state.texts[idx].lineSpacing = +e.target.value;')
+             '        preferredTextLineSpacing[idx] = +e.target.value;\n        userAdjustedLineSpacing[idx] = true;\n        state.texts[idx].lineSpacing = +e.target.value;')
 
 replace_once('  let previewT = TYPE_END_FRAME/(FPS*DURATION); // start the static editor view past the typing-in animation',
              '  let previewT = 0; // start the preview at the beginning of the video')
@@ -122,6 +69,80 @@ replace_once('''  .center-img-btn.pressed{ border-color:var(--accent); backgroun
 
 replace_once('  .transport{ display:flex; gap:10px; align-items:center; }',
              '  .transport{ display:flex; gap:10px; align-items:center; }\n  .transport .btn{ font-weight:500; }\n  .transport .transport-icon{ color:var(--accent); }\n  #resetBtn .transport-icon{ font-size:24px; line-height:18px; }')
+
+replace_once('  input[type=range]{ -webkit-appearance:none;', '''  .range-stepper{ display:flex; align-items:center; gap:7px; direction:ltr; width:100%; min-width:0; }
+  .range-stepper input[type=range]{ flex:1 1 0; min-width:0; width:100%; max-width:none; margin:0; }
+  .range-stepper button{ position:relative; flex:0 0 25px; width:25px; height:25px; padding:0; border:1px solid var(--line); border-radius:7px; background:var(--panel); color:var(--accent); cursor:pointer; touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
+  .range-stepper button::before,.range-stepper button.range-step-plus::after{ content:""; position:absolute; left:50%; top:50%; width:11px; height:2px; border-radius:2px; background:currentColor; transform:translate(-50%,-50%); }
+  .range-stepper button.range-step-plus::after{ transform:translate(-50%,-50%) rotate(90deg); }
+  .range-stepper.preview-stepper button{ display:grid; place-items:center; }
+  .range-stepper.preview-stepper button::before,.range-stepper.preview-stepper button::after{ display:none; }
+  .range-stepper.preview-stepper button svg{ width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; }
+  .range-stepper button:hover{ background:var(--panel-2); border-color:var(--accent); }
+  .range-stepper button:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  .slider-row .range-stepper{ flex:1; max-width:440px; }
+  .intensity-row .range-stepper{ max-width:292px; }
+  .settings-sliders .slider-row .range-stepper{ grid-column:1; grid-row:1; width:100%; max-width:none; }
+  .settings-sliders .slider-row .range-stepper input[type=range]{ grid-column:auto; grid-row:auto; margin:0; width:100%; max-width:none; }
+  .scrubber-row .time-label{ flex:0 0 104px; width:104px; white-space:nowrap; }
+  .scrubber-row .range-stepper{ flex:1; }
+  @media (max-width:700px){ .range-stepper{ gap:5px; } .range-stepper button{ flex-basis:23px; width:23px; height:23px; } }
+  input[type=range]{ -webkit-appearance:none;''')
+
+replace_once('  /* ---------------- playback ---------------- */', '''  // Give every range input, including the dynamically created text controls,
+  // one-unit adjustments without changing its native drag step or input event.
+  document.querySelectorAll('input[type="range"]').forEach(input=>{
+    const stepper = document.createElement('div');
+    stepper.className = 'range-stepper';
+    if(input.id === 'scrubber') stepper.classList.add('preview-stepper');
+    const label = input.closest('.field, .slider-row')?.querySelector('label')?.textContent.trim() ||
+      (input.id === 'scrubber' ? 'وقت المعاينة' : input.id);
+    function adjust(direction){
+      if(input.disabled) return;
+      const min = Number(input.min || 0);
+      const max = Number(input.max || 100);
+      const next = Math.max(min, Math.min(max, Number(input.value) + direction));
+      if(next === Number(input.value)) return;
+      input.value = String(next);
+      input.dispatchEvent(new Event('input', {bubbles:true}));
+    }
+    function makeButton(direction, action){
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = direction > 0 ? 'range-step-plus' : 'range-step-minus';
+      if(input.id === 'scrubber'){
+        const arrows = direction > 0 ? 'M3 4l5 5-5 5 M9 4l5 5-5 5' : 'M15 4l-5 5 5 5 M9 4l-5 5 5 5';
+        button.innerHTML = `<svg viewBox="0 0 18 18" aria-hidden="true"><path d="${arrows}"/></svg>`;
+      }
+      button.setAttribute('aria-label', action + ' ' + label);
+      let holdDelay, repeatInterval;
+      function stop(){
+        clearTimeout(holdDelay);
+        clearInterval(repeatInterval);
+      }
+      button.addEventListener('pointerdown', event=>{
+        if(event.button !== 0) return;
+        event.preventDefault();
+        stop();
+        adjust(direction);
+        holdDelay = setTimeout(()=>{
+          repeatInterval = setInterval(()=>adjust(direction), 75);
+        }, 350);
+      });
+      button.addEventListener('pointerup', stop);
+      button.addEventListener('pointercancel', stop);
+      button.addEventListener('pointerleave', stop);
+      window.addEventListener('blur', stop);
+      button.addEventListener('click', event=>{
+        if(event.detail === 0) adjust(direction); // Keyboard and assistive tech.
+      });
+      return button;
+    }
+    input.before(stepper);
+    stepper.append(makeButton(-1, 'تقليل'), input, makeButton(1, 'زيادة'));
+  });
+
+  /* ---------------- playback ---------------- */''')
 replace_once('<button class="btn btn-ghost" id="playBtn">▶ تشغيل المعاينة</button>',
              '<button class="btn btn-ghost" id="playBtn"><span class="transport-icon" aria-hidden="true">▶</span> تشغيل المعاينة</button>')
 replace_once('<button class="btn btn-ghost" id="resetBtn">↺ البداية</button>',
