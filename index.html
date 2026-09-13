@@ -45610,5 +45610,58 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
 
 })();
 </script>
+<script id="preview-edge-jump-patch">
+(() => {
+  function installPreviewEdgeJump(){
+    const scrubber = document.querySelector('#scrubber');
+    if(!scrubber || scrubber.dataset.edgeJumpInstalled === '1') return false;
+    const stepper = scrubber.closest('.preview-stepper, .range-stepper') || scrubber.parentElement;
+    if(!stepper) return false;
+    const buttons = Array.from(stepper.querySelectorAll('button'));
+    if(buttons.length < 2) return false;
+
+    scrubber.dataset.edgeJumpInstalled = '1';
+    const leftButton = buttons[0];
+    const rightButton = buttons[buttons.length - 1];
+
+    function jump(toEnd){
+      const raw = toEnd ? scrubber.max : scrubber.min;
+      const fallback = toEnd ? 100 : 0;
+      scrubber.value = String(raw === '' ? fallback : Number(raw));
+      scrubber.dispatchEvent(new Event('input', {bubbles:true}));
+      scrubber.dispatchEvent(new Event('change', {bubbles:true}));
+    }
+
+    function bind(button, toEnd){
+      button.addEventListener('pointerdown', event => {
+        if(event.button !== 0) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        jump(toEnd);
+      }, true);
+      button.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        jump(toEnd);
+      }, true);
+    }
+
+    bind(leftButton, false);
+    bind(rightButton, true);
+    return true;
+  }
+
+  function start(){
+    if(installPreviewEdgeJump()) return;
+    const observer = new MutationObserver(() => {
+      if(installPreviewEdgeJump()) observer.disconnect();
+    });
+    observer.observe(document.documentElement, {childList:true, subtree:true});
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once:true});
+  else start();
+})();
+</script>
 </body>
 </html>
