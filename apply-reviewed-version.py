@@ -21,7 +21,7 @@ old_headers = [
     '''    <div>\n      <h1>Celebrities Top Snap</h1>\n      <p>صورة + نص + موسيقى ← فيديو جاهز للنشر بمقاس ٩:١٦</p>\n    </div>''',
     '''    <div>\n      <h1>Celebrities Top Snap</h1>\n      <p>صورة + نص + موسيقى ← فيديو جاهز للنشر بمقاس 9:16</p>\n    </div>'''
 ]
-# Swapped visual positions: Celebrities first, Screenshot second.
+# Fixed tab positions: Celebrities first, Screenshot second.
 new_header = '''    <div>\n      <nav class="tool-tabs" aria-label="Video tools"><a href="./" aria-current="page">Celebrities Top Snap</a><span aria-hidden="true">|</span><a href="screenshot.html">Screenshot Top Snap</a></nav>\n    </div>'''
 for old_header in old_headers:
     if old_header in text:
@@ -31,8 +31,8 @@ else:
     if 'class="tool-tabs"' not in text:
         raise SystemExit('Expected Celebrities header block not found')
     old_nav = '<nav class="tool-tabs" aria-label="Video tools"><a href="screenshot.html">Screenshot Top Snap</a><span aria-hidden="true">|</span><a href="./" aria-current="page">Celebrities Top Snap</a></nav>'
-    swapped_nav = '<nav class="tool-tabs" aria-label="Video tools"><a href="./" aria-current="page">Celebrities Top Snap</a><span aria-hidden="true">|</span><a href="screenshot.html">Screenshot Top Snap</a></nav>'
-    text = text.replace(old_nav, swapped_nav, 1)
+    fixed_nav = '<nav class="tool-tabs" aria-label="Video tools"><a href="./" aria-current="page">Celebrities Top Snap</a><span aria-hidden="true">|</span><a href="screenshot.html">Screenshot Top Snap</a></nav>'
+    text = text.replace(old_nav, fixed_nav, 1)
     text = text.replace('      <p>صورة + نص + موسيقى ← فيديو جاهز للنشر بمقاس ٩:١٦</p>\n', '', 1)
     text = text.replace('      <p>صورة + نص + موسيقى ← فيديو جاهز للنشر بمقاس 9:16</p>\n', '', 1)
 
@@ -102,16 +102,29 @@ def inject_edge_jump(html):
         raise SystemExit('Could not find </body> for preview edge-jump patch')
     return html[:marker] + edge_jump_script + '\n' + html[marker:]
 
+def normalize_screenshot_tabs(html):
+    desired = '<nav class="tool-tabs" aria-label="Video tools"><a href="./">Celebrities Top Snap</a><span aria-hidden="true">|</span><a href="screenshot.html" aria-current="page">Screenshot Top Snap</a></nav>'
+    variants = [
+        '<nav class="tool-tabs" aria-label="Video tools"><a href="screenshot.html" aria-current="page">Screenshot Top Snap</a><span aria-hidden="true">|</span><a href="./">Celebrities Top Snap</a></nav>',
+        desired,
+    ]
+    for variant in variants:
+        if variant in html:
+            return html.replace(variant, desired, 1)
+    raise SystemExit('Expected Screenshot Top Snap tab navigation not found')
+
 text = inject_edge_jump(text)
 p.write_text(text, encoding='utf-8')
 
 # The Pages artifact is the public folder, so publish the second self-contained tool there too.
-# Apply the same preview-control behavior while copying it, without rewriting the large source file.
+# Keep the same tab positions as Celebrities, switch only the active state, and apply
+# the same preview-control behavior while copying it.
 screenshot_source = Path('screenshot.html')
 screenshot_target = p.parent / 'screenshot.html'
 if not screenshot_source.exists():
     raise SystemExit('screenshot.html is missing from repository root')
 screenshot_text = screenshot_source.read_text(encoding='utf-8')
+screenshot_text = normalize_screenshot_tabs(screenshot_text)
 screenshot_target.write_text(inject_edge_jump(screenshot_text), encoding='utf-8')
 
-print('Shared Top Snap tabs applied; preview double arrows now jump to start/end in both tools')
+print('Top Snap tabs fixed in place; inactive tab stays muted; preview double arrows jump to start/end in both tools')
