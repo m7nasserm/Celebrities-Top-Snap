@@ -44638,6 +44638,7 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
   // Save each slider's manually selected value so it can return when the
   // headline fits on one line again.
   const preferredTextLineSpacing = state.texts.map(layer => layer.lineSpacing);
+  const userAdjustedLineSpacing = state.texts.map(() => false);
   let compactHeadlineSpacing = false;
 
   function syncHeadlineLineSpacing(){
@@ -44647,14 +44648,14 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
     // On the first render, the text cards may not exist yet; update them once
     // they are created, while avoiding DOM work during every export frame.
     const firstSlider = document.querySelector('#textLayersWrap input[data-field="lineSpacing"]');
-    if(wraps === compactHeadlineSpacing && firstSlider && firstSlider.disabled === wraps) return;
+    if(wraps === compactHeadlineSpacing && firstSlider) return;
     compactHeadlineSpacing = wraps;
     state.texts.forEach((layer, idx)=>{
-      layer.lineSpacing = wraps ? 0 : preferredTextLineSpacing[idx];
+      layer.lineSpacing = wraps && !userAdjustedLineSpacing[idx] ? 0 : preferredTextLineSpacing[idx];
       const slider = document.querySelector(`#textLayersWrap input[data-field="lineSpacing"][data-idx="${idx}"]`);
       if(!slider) return;
       slider.value = layer.lineSpacing;
-      slider.disabled = wraps;
+      slider.disabled = false;
       const label = slider.closest('.field').querySelector('[data-out="lineSpacing"]');
       if(label) label.textContent = layer.lineSpacing + 'px';
     });
@@ -44932,6 +44933,7 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
       card.querySelector('[data-field="color"]').addEventListener("input", e=>{ state.texts[idx].color = e.target.value; renderCurrent(); });
       card.querySelector('[data-field="lineSpacing"]').addEventListener("input", e=>{
         preferredTextLineSpacing[idx] = +e.target.value;
+        userAdjustedLineSpacing[idx] = true;
         state.texts[idx].lineSpacing = +e.target.value;
         card.querySelector('[data-out="lineSpacing"]').textContent = e.target.value+"px";
         renderCurrent();
