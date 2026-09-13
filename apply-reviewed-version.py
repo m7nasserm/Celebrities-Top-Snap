@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 from pathlib import Path
-import shutil
 import subprocess
 import sys
 
@@ -37,13 +36,82 @@ else:
     text = text.replace('      <p>صورة + نص + موسيقى ← فيديو جاهز للنشر بمقاس ٩:١٦</p>\n', '', 1)
     text = text.replace('      <p>صورة + نص + موسيقى ← فيديو جاهز للنشر بمقاس 9:16</p>\n', '', 1)
 
+# Override only the preview scrubber's double-arrow buttons. The left button
+# jumps to the first frame and the right button jumps to the last frame.
+# Capture-phase listeners suppress the older one-step/press-and-hold behavior,
+# while every other slider button keeps its existing behavior.
+edge_jump_script = r'''<script id="preview-edge-jump-patch">
+(() => {
+  function installPreviewEdgeJump(){
+    const scrubber = document.querySelector('#scrubber');
+    if(!scrubber || scrubber.dataset.edgeJumpInstalled === '1') return false;
+    const stepper = scrubber.closest('.preview-stepper, .range-stepper') || scrubber.parentElement;
+    if(!stepper) return false;
+    const buttons = Array.from(stepper.querySelectorAll('button'));
+    if(buttons.length < 2) return false;
+
+    scrubber.dataset.edgeJumpInstalled = '1';
+    const leftButton = buttons[0];
+    const rightButton = buttons[buttons.length - 1];
+
+    function jump(toEnd){
+      const raw = toEnd ? scrubber.max : scrubber.min;
+      const fallback = toEnd ? 100 : 0;
+      scrubber.value = String(raw === '' ? fallback : Number(raw));
+      scrubber.dispatchEvent(new Event('input', {bubbles:true}));
+      scrubber.dispatchEvent(new Event('change', {bubbles:true}));
+    }
+
+    function bind(button, toEnd){
+      button.addEventListener('pointerdown', event => {
+        if(event.button !== 0) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        jump(toEnd);
+      }, true);
+      button.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        jump(toEnd);
+      }, true);
+    }
+
+    bind(leftButton, false);
+    bind(rightButton, true);
+    return true;
+  }
+
+  function start(){
+    if(installPreviewEdgeJump()) return;
+    const observer = new MutationObserver(() => {
+      if(installPreviewEdgeJump()) observer.disconnect();
+    });
+    observer.observe(document.documentElement, {childList:true, subtree:true});
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once:true});
+  else start();
+})();
+</script>'''
+
+def inject_edge_jump(html):
+    if 'id="preview-edge-jump-patch"' in html:
+        return html
+    marker = html.rfind('</body>')
+    if marker == -1:
+        raise SystemExit('Could not find </body> for preview edge-jump patch')
+    return html[:marker] + edge_jump_script + '\n' + html[marker:]
+
+text = inject_edge_jump(text)
 p.write_text(text, encoding='utf-8')
 
 # The Pages artifact is the public folder, so publish the second self-contained tool there too.
+# Apply the same preview-control behavior while copying it, without rewriting the large source file.
 screenshot_source = Path('screenshot.html')
 screenshot_target = p.parent / 'screenshot.html'
 if not screenshot_source.exists():
     raise SystemExit('screenshot.html is missing from repository root')
-shutil.copyfile(screenshot_source, screenshot_target)
+screenshot_text = screenshot_source.read_text(encoding='utf-8')
+screenshot_target.write_text(inject_edge_jump(screenshot_text), encoding='utf-8')
 
-print('Shared Top Snap tabs applied; Celebrities subtitle removed; Screenshot Top Snap published')
+print('Shared Top Snap tabs applied; preview double arrows now jump to start/end in both tools')
