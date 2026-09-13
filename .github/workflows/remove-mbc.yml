@@ -1,0 +1,55 @@
+name: Remove Legacy Logo
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/remove-mbc.yml'
+permissions:
+  contents: write
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove legacy logo code and asset
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('headline_spacing_patch.py')
+          text = path.read_text(encoding='utf-8')
+
+          start_marker = '# Embed the supplied logo to keep the published site self-contained.'
+          end_marker = '# Keep the existing sliders and their listeners intact.'
+          start = text.find(start_marker)
+          end = text.find(end_marker, start)
+          if start < 0 or end < 0:
+              raise SystemExit('Legacy logo block not found')
+
+          direct_snapchat = '''# Insert the approved Snapchat header directly, without any legacy placeholder or asset.\nreplace_once('  header h1{font-size:22.5px;',\n             '  .brand-logo{flex:none;margin-inline-start:auto;width:clamp(44px,5vw,56px);aspect-ratio:1;border-radius:19%;background:var(--accent-grad);overflow:hidden;}\\n  .brand-logo svg{display:block;width:100%;height:100%;}\\n  header h1{font-size:22.5px;')\nreplace_once('  </header>\\n\\n  <main>',\n             '    ' + Path('snapchat-header.html').read_text(encoding='utf-8').strip() + '\\n  </header>\\n\\n  <main>')\n\n'''
+          text = text[:start] + direct_snapchat + text[end:]
+
+          legacy_tail = "\np=path\n# Apply the approved Snapchat header icon using the existing theme gradient."
+          tail = text.find(legacy_tail)
+          if tail >= 0:
+              text = text[:tail].rstrip() + '\n'
+
+          if 'MBC' in text or 'mbc-logo' in text:
+              raise SystemExit('Legacy logo references remain in headline_spacing_patch.py')
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+          git rm mbc-logo.b64
+          git rm .github/workflows/remove-mbc.yml
+
+          if grep -Rni --exclude-dir=.git -E 'MBC|mbc-logo' .; then
+            echo 'Legacy logo references still exist.'
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add headline_spacing_patch.py
+          git commit -m "Remove legacy logo code and asset"
+          git push
