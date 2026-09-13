@@ -84,6 +84,7 @@ replace_once('  input[type=range]{ -webkit-appearance:none;', '''  .range-steppe
   .intensity-row .range-stepper{ max-width:292px; }
   .settings-sliders .slider-row .range-stepper{ grid-column:1; grid-row:1; width:100%; max-width:none; }
   .settings-sliders .slider-row .range-stepper input[type=range]{ grid-column:auto; grid-row:auto; margin:0; width:100%; max-width:none; }
+  .scrubber-row .time-label{ flex:0 0 104px; width:104px; white-space:nowrap; }
   .scrubber-row .range-stepper{ flex:1; }
   @media (max-width:700px){ .range-stepper{ gap:5px; } .range-stepper button{ flex-basis:23px; width:23px; height:23px; } }
   input[type=range]{ -webkit-appearance:none;''')
