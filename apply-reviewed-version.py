@@ -101,6 +101,35 @@ def normalize_screenshot_tabs(html):
     return html
 
 def patch_screenshot_export(html):
+    # Arc can successfully display these embedded images while HTMLImageElement.decode()
+    # still rejects them. Avoid forcing a second decode before export; wait for the
+    # normal image load state instead. This leaves the rendered pixels unchanged.
+    risky_preload = '''      await Promise.all(Object.values(state.bgImages).map(img=>img.decode()));
+      await textboxImg.decode();state.textboxImg=textboxImg;'''
+    safe_preload = r'''      const waitForRenderableImage = img => {
+        if(img.complete && img.naturalWidth > 0) return Promise.resolve();
+        return new Promise((resolve,reject)=>{
+          const cleanup=()=>{
+            img.removeEventListener('load',onLoad);
+            img.removeEventListener('error',onError);
+          };
+          const onLoad=()=>{cleanup();resolve();};
+          const onError=()=>{cleanup();reject(new Error('تعذّر تحميل أحد عناصر الصورة'));};
+          img.addEventListener('load',onLoad,{once:true});
+          img.addEventListener('error',onError,{once:true});
+          if(img.complete){
+            cleanup();
+            if(img.naturalWidth > 0) resolve();
+            else reject(new Error('تعذّر تحميل أحد عناصر الصورة'));
+          }
+        });
+      };
+      await Promise.all(Object.values(state.bgImages).map(waitForRenderableImage));
+      await waitForRenderableImage(textboxImg);
+      state.textboxImg=textboxImg;'''
+    if risky_preload in html:
+        html = html.replace(risky_preload, safe_preload, 1)
+
     start_token = 'const music=await loadMusicBuffer();'
     end_token = "finishExport(new Blob([output.target.buffer],{type:'video/mp4'}),'mp4');"
     start = html.find(start_token)
@@ -109,7 +138,6 @@ def patch_screenshot_export(html):
         return html
     # Preserve the existing indentation before the start token.
     line_start = html.rfind('\n', 0, start) + 1
-    indent = html[line_start:start]
     start = line_start
     end += len(end_token)
 
@@ -202,4 +230,4 @@ screenshot_text = normalize_screenshot_tabs(screenshot_text)
 screenshot_text = patch_screenshot_export(screenshot_text)
 screenshot_target.write_text(inject_edge_jump(screenshot_text), encoding='utf-8')
 
-print('Top Snap tabs fixed; preview edge jumps preserved; Screenshot export has smooth browser fallback')
+print('Top Snap tabs fixed; preview edge jumps preserved; Screenshot export avoids Arc image decode failures and keeps the smooth browser fallback')
