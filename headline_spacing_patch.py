@@ -209,13 +209,11 @@ replace_once('scrubber.value = Math.round(previewT*300);',
 replace_once('previewT = (+e.target.value)/300;',
              'previewT = (+e.target.value)/299;')
 
-# Embed the supplied logo to keep the published site self-contained. Its alpha
-# channel masks the existing purple gradient so the artwork matches the theme.
-logo_data = Path(__file__).with_name('mbc-logo.b64').read_text(encoding='ascii').strip()
+# Insert the current Snapchat header directly into the generated page.
 replace_once('  header h1{font-size:22.5px;',
-             '  .brand-logo{ flex:none; margin-inline-start:auto; width:clamp(86px, 11vw, 126px); aspect-ratio:800 / 350; background:var(--accent-grad); --logo-mask:url("data:image/png;base64,' + logo_data + '"); -webkit-mask:var(--logo-mask) center / contain no-repeat; mask:var(--logo-mask) center / contain no-repeat; }\n  header h1{font-size:22.5px;')
+             '  .brand-logo{flex:none;margin-inline-start:auto;width:clamp(44px,5vw,56px);aspect-ratio:1;border-radius:19%;background:var(--accent-grad);overflow:hidden;}\n  .brand-logo svg{display:block;width:100%;height:100%;}\n  header h1{font-size:22.5px;')
 replace_once('  </header>\n\n  <main>',
-             '    <div class="brand-logo" role="img" aria-label="MBC"></div>\n  </header>\n\n  <main>')
+             '    ' + Path(__file__).with_name('snapchat-header.html').read_text(encoding='utf-8').strip() + '\n  </header>\n\n  <main>')
 
 # Keep the existing sliders and their listeners intact. The suggestion is
 # offered only after all dynamically generated controls are initialized.
@@ -300,14 +298,3 @@ replace_once('  /* ---------------- playback ---------------- */', '''  // The s
 
 path.write_text(html, encoding="utf-8")
 print("Automatic two-line headline spacing applied")
-
-p=path
-# Apply the approved Snapchat header icon using the existing theme gradient.
-import re
-text=p.read_text(encoding='utf-8')
-text,n=re.subn(r'  \.brand-logo\{[^\n]+', '  .brand-logo{flex:none;margin-inline-start:auto;width:clamp(44px,5vw,56px);aspect-ratio:1;border-radius:19%;background:var(--accent-grad);overflow:hidden;}\\n  .brand-logo svg{display:block;width:100%;height:100%;}',text,count=1)
-assert n == 1, 'Expected header logo style'
-old='<div class="brand-logo" role="img" aria-label="MBC"></div>'
-assert old in text, 'Expected MBC header'
-text=text.replace(old,Path('snapchat-header.html').read_text(encoding='utf-8'),1)
-p.write_text(text,encoding='utf-8')

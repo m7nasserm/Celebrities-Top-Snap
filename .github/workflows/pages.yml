@@ -30,6 +30,8 @@ jobs:
           grep -F 'grid-template-columns:repeat(7,minmax(0,1fr))' public/index.html
           grep -F 'webkit-playsinline' public/index.html
           grep -F 'requestVideoFrameCallback' public/index.html
+          # Include the second editor alongside the generated default page.
+          cp screenshot.html public/screenshot.html
       - name: Save ready-to-download index.html in repository
         run: |
           cp public/index.html index.html
