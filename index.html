@@ -45231,6 +45231,22 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
     stepper.append(makeButton(-1, 'تقليل'), input, makeButton(1, 'زيادة'));
   });
 
+  // The subline may never exceed the headline size minus three pixels.
+  // Allow 17px at the headline's existing 20px minimum.
+  const headlineSizeSlider = textLayersWrap.querySelector('input[data-field="size"][data-idx="0"]');
+  const sublineSizeSlider = textLayersWrap.querySelector('input[data-field="size"][data-idx="1"]');
+  function syncSublineSizeLimit(){
+    const limit = state.texts[0].size - 3;
+    sublineSizeSlider.min = '17';
+    sublineSizeSlider.max = String(limit);
+    if(state.texts[1].size > limit){
+      sublineSizeSlider.value = String(limit);
+      sublineSizeSlider.dispatchEvent(new Event('input', {bubbles:true}));
+    }
+  }
+  headlineSizeSlider.addEventListener('input', syncSublineSizeLimit);
+  syncSublineSizeLimit();
+
   // Optional 2+2 to 1+2 text layout. Attach after the slider controls so
   // suggestion failures cannot prevent their creation.
   const textSuggestion = document.getElementById('textLayoutSuggestion');
