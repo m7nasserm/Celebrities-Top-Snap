@@ -140,6 +140,49 @@ replace_once('  /* ---------------- playback ---------------- */', '''  // Give 
     }
     input.before(stepper);
     stepper.append(makeButton(-1, 'تقليل'), input, makeButton(1, 'زيادة'));
+    if(input.id !== 'scrubber'){
+      const originalValue = Number(input.defaultValue);
+      let firstThumbDown = false, lastDownAt = 0, secondThumbDown = false;
+      let secondDownX = 0, secondDownY = 0;
+      function isOnThumb(event){
+        const rect = input.getBoundingClientRect();
+        const min = Number(input.min || 0), max = Number(input.max || 100);
+        const fraction = max > min ? (Number(input.value) - min) / (max - min) : 0;
+        const direction = getComputedStyle(input).direction === 'rtl' ? 1 - fraction : fraction;
+        const centerX = rect.left + 8 + Math.max(0, rect.width - 16) * direction;
+        return Math.abs(event.clientX - centerX) <= 13 &&
+          Math.abs(event.clientY - (rect.top + rect.height / 2)) <= 16;
+      }
+      function restoreDefault(){
+        const min = Number(input.min || 0), max = Number(input.max || 100);
+        const value = Math.max(min, Math.min(max, originalValue));
+        input.value = String(value);
+        input.dispatchEvent(new Event('input', {bubbles:true}));
+      }
+      input.addEventListener('pointerdown', event=>{
+        if(event.button !== 0) return;
+        const onThumb = isOnThumb(event);
+        secondThumbDown = onThumb && firstThumbDown && event.timeStamp - lastDownAt < 650;
+        firstThumbDown = onThumb;
+        lastDownAt = event.timeStamp;
+        secondDownX = event.clientX; secondDownY = event.clientY;
+      });
+      input.addEventListener('pointerup', event=>{
+        // On touch screens, browsers may not emit dblclick after two taps.
+        if(event.pointerType === 'touch' && secondThumbDown &&
+           Math.hypot(event.clientX - secondDownX, event.clientY - secondDownY) < 10){
+          restoreDefault();
+          secondThumbDown = false;
+        }
+      });
+      input.addEventListener('pointercancel', ()=>{ secondThumbDown = false; });
+      input.addEventListener('dblclick', event=>{
+        if(!secondThumbDown) return; // A double-click on the track keeps its native behavior.
+        event.preventDefault();
+        restoreDefault();
+        secondThumbDown = false;
+      });
+    }
   });
 
   /* ---------------- playback ---------------- */''')
