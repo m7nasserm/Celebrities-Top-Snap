@@ -72,7 +72,9 @@ replace_once('  .transport{ display:flex; gap:10px; align-items:center; }',
 
 replace_once('  input[type=range]{ -webkit-appearance:none;', '''  .range-stepper{ display:flex; align-items:center; gap:7px; direction:ltr; width:100%; min-width:0; }
   .range-stepper input[type=range]{ flex:1 1 0; min-width:0; width:100%; max-width:none; margin:0; }
-  .range-stepper button{ flex:0 0 25px; width:25px; height:25px; padding:0; border:1px solid var(--line); border-radius:7px; background:var(--panel); color:var(--accent); font:600 17px/1 'Tajawal',sans-serif; cursor:pointer; display:grid; place-items:center; touch-action:none; }
+  .range-stepper button{ position:relative; flex:0 0 25px; width:25px; height:25px; padding:0; border:1px solid var(--line); border-radius:7px; background:var(--panel); color:var(--accent); cursor:pointer; touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
+  .range-stepper button::before,.range-stepper button.range-step-plus::after{ content:""; position:absolute; left:50%; top:50%; width:11px; height:2px; border-radius:2px; background:currentColor; transform:translate(-50%,-50%); }
+  .range-stepper button.range-step-plus::after{ transform:translate(-50%,-50%) rotate(90deg); }
   .range-stepper button:hover{ background:var(--panel-2); border-color:var(--accent); }
   .range-stepper button:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
   .slider-row .range-stepper{ flex:1; max-width:440px; }
@@ -99,10 +101,10 @@ replace_once('  /* ---------------- playback ---------------- */', '''  // Give 
       input.value = String(next);
       input.dispatchEvent(new Event('input', {bubbles:true}));
     }
-    function makeButton(direction, symbol, action){
+    function makeButton(direction, action){
       const button = document.createElement('button');
       button.type = 'button';
-      button.textContent = symbol;
+      button.className = direction > 0 ? 'range-step-plus' : 'range-step-minus';
       button.setAttribute('aria-label', action + ' ' + label);
       let holdDelay, repeatInterval;
       function stop(){
@@ -128,7 +130,7 @@ replace_once('  /* ---------------- playback ---------------- */', '''  // Give 
       return button;
     }
     input.before(stepper);
-    stepper.append(makeButton(-1, '−', 'تقليل'), input, makeButton(1, '+', 'زيادة'));
+    stepper.append(makeButton(-1, 'تقليل'), input, makeButton(1, 'زيادة'));
   });
 
   /* ---------------- playback ---------------- */''')
