@@ -15,6 +15,7 @@ def replace_once(old, new):
 replace_once('  function drawTextLayers(t){', '''  // Save each slider's manually selected value so it can return when the
   // headline fits on one line again.
   const preferredTextLineSpacing = state.texts.map(layer => layer.lineSpacing);
+  const userAdjustedLineSpacing = state.texts.map(() => false);
   let compactHeadlineSpacing = false;
 
   function syncHeadlineLineSpacing(){
@@ -24,14 +25,14 @@ replace_once('  function drawTextLayers(t){', '''  // Save each slider's manuall
     // On the first render, the text cards may not exist yet; update them once
     // they are created, while avoiding DOM work during every export frame.
     const firstSlider = document.querySelector('#textLayersWrap input[data-field="lineSpacing"]');
-    if(wraps === compactHeadlineSpacing && firstSlider && firstSlider.disabled === wraps) return;
+    if(wraps === compactHeadlineSpacing && firstSlider) return;
     compactHeadlineSpacing = wraps;
     state.texts.forEach((layer, idx)=>{
-      layer.lineSpacing = wraps ? 0 : preferredTextLineSpacing[idx];
+      layer.lineSpacing = wraps && !userAdjustedLineSpacing[idx] ? 0 : preferredTextLineSpacing[idx];
       const slider = document.querySelector(`#textLayersWrap input[data-field="lineSpacing"][data-idx="${idx}"]`);
       if(!slider) return;
       slider.value = layer.lineSpacing;
-      slider.disabled = wraps;
+      slider.disabled = false;
       const label = slider.closest('.field').querySelector('[data-out="lineSpacing"]');
       if(label) label.textContent = layer.lineSpacing + 'px';
     });
@@ -50,7 +51,7 @@ replace_once('    let y = TEXT_BOX.y + singleLineSublineOffset;',
 replace_once('      const lineHeight = layer.size * 1.28 + (layer.lineSpacing||0);',
              '      const lineHeight = layer.size * 1.28 + (layer.lineSpacing||0);\n      if(idx === 1 && offsetSublineByFive) y += 5;')
 replace_once('        state.texts[idx].lineSpacing = +e.target.value;',
-             '        preferredTextLineSpacing[idx] = +e.target.value;\n        state.texts[idx].lineSpacing = +e.target.value;')
+             '        preferredTextLineSpacing[idx] = +e.target.value;\n        userAdjustedLineSpacing[idx] = true;\n        state.texts[idx].lineSpacing = +e.target.value;')
 
 replace_once('  let previewT = TYPE_END_FRAME/(FPS*DURATION); // start the static editor view past the typing-in animation',
              '  let previewT = 0; // start the preview at the beginning of the video')
