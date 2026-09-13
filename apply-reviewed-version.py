@@ -10,36 +10,33 @@ subprocess.run([sys.executable, 'deploy_patch.py', str(p)], check=True)
 text = p.read_text(encoding='utf-8')
 
 # Add the shared two-tool navigation to the generated Celebrities page.
-css_anchor = "  footer.note{ padding:14px 24px 26px; color:var(--muted); font-size:14.375px; line-height:1.8; border-top:1px solid var(--line); background:var(--panel); }\n"
+css_anchor = "  footer.note{ padding:14px 24px 26px; color:var(--muted); font-size:14px; line-height:1.8; border-top:1px solid var(--line); background:var(--panel); }\n"
+# The source has used both 14px and 14.375px across reviewed builds.
+css_anchor_alt = "  footer.note{ padding:14px 24px 26px; color:var(--muted); font-size:14.375px; line-height:1.8; border-top:1px solid var(--line); background:var(--panel); }\n"
 css = '''  .tool-tabs{display:flex;align-items:center;gap:14px;white-space:nowrap;}\n  .tool-tabs a{display:inline-block;padding:4px 0 5px;border-bottom:3px solid transparent;color:var(--muted);font-size:22.5px;font-weight:500;text-decoration:none;line-height:1.3;}\n  .tool-tabs a:hover{color:var(--accent);}\n  .tool-tabs a[aria-current="page"]{color:var(--accent);border-bottom-color:var(--accent);font-weight:700;}\n  .tool-tabs span{color:var(--line);font-size:21px;user-select:none;}\n  .tool-tabs a:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:3px;}\n  @media(max-width:650px){\n    header{flex-wrap:wrap;}\n    header .mark{order:0;}\n    header .brand-logo{order:1;margin-inline-start:auto;}\n    header>div:nth-child(2){order:2;flex-basis:100%;min-width:0;}\n    .tool-tabs{gap:7px;max-width:100%;justify-content:center;}\n    .tool-tabs a{font-size:clamp(10px,3vw,15px);}\n    .tool-tabs span{font-size:15px;}\n  }\n'''
 if '.tool-tabs{' not in text:
-    if css_anchor not in text:
+    anchor = css_anchor_alt if css_anchor_alt in text else css_anchor
+    if anchor not in text:
         raise SystemExit('Could not find CSS insertion point for tool tabs')
-    text = text.replace(css_anchor, css_anchor + css, 1)
+    text = text.replace(anchor, anchor + css, 1)
 
 old_headers = [
     '''    <div>\n      <h1>Celebrities Top Snap</h1>\n      <p>صورة + نص + موسيقى ← فيديو جاهز للنشر بمقاس ٩:١٦</p>\n    </div>''',
     '''    <div>\n      <h1>Celebrities Top Snap</h1>\n      <p>صورة + نص + موسيقى ← فيديو جاهز للنشر بمقاس 9:16</p>\n    </div>'''
 ]
-# Fixed tab positions: Celebrities first, Screenshot second.
 new_header = '''    <div>\n      <nav class="tool-tabs" aria-label="Video tools"><a href="./" aria-current="page">Celebrities Top Snap</a><span aria-hidden="true">|</span><a href="screenshot.html">Screenshot Top Snap</a></nav>\n    </div>'''
 for old_header in old_headers:
     if old_header in text:
         text = text.replace(old_header, new_header, 1)
         break
 else:
-    if 'class="tool-tabs"' not in text:
-        raise SystemExit('Expected Celebrities header block not found')
     old_nav = '<nav class="tool-tabs" aria-label="Video tools"><a href="screenshot.html">Screenshot Top Snap</a><span aria-hidden="true">|</span><a href="./" aria-current="page">Celebrities Top Snap</a></nav>'
     fixed_nav = '<nav class="tool-tabs" aria-label="Video tools"><a href="./" aria-current="page">Celebrities Top Snap</a><span aria-hidden="true">|</span><a href="screenshot.html">Screenshot Top Snap</a></nav>'
-    text = text.replace(old_nav, fixed_nav, 1)
+    if old_nav in text:
+        text = text.replace(old_nav, fixed_nav, 1)
     text = text.replace('      <p>صورة + نص + موسيقى ← فيديو جاهز للنشر بمقاس ٩:١٦</p>\n', '', 1)
     text = text.replace('      <p>صورة + نص + موسيقى ← فيديو جاهز للنشر بمقاس 9:16</p>\n', '', 1)
 
-# Override only the preview scrubber's double-arrow buttons. The left button
-# jumps to the first frame and the right button jumps to the last frame.
-# Capture-phase listeners suppress the older one-step/press-and-hold behavior,
-# while every other slider button keeps its existing behavior.
 edge_jump_script = r'''<script id="preview-edge-jump-patch">
 (() => {
   function installPreviewEdgeJump(){
@@ -49,11 +46,9 @@ edge_jump_script = r'''<script id="preview-edge-jump-patch">
     if(!stepper) return false;
     const buttons = Array.from(stepper.querySelectorAll('button'));
     if(buttons.length < 2) return false;
-
     scrubber.dataset.edgeJumpInstalled = '1';
     const leftButton = buttons[0];
     const rightButton = buttons[buttons.length - 1];
-
     function jump(toEnd){
       const raw = toEnd ? scrubber.max : scrubber.min;
       const fallback = toEnd ? 100 : 0;
@@ -61,7 +56,6 @@ edge_jump_script = r'''<script id="preview-edge-jump-patch">
       scrubber.dispatchEvent(new Event('input', {bubbles:true}));
       scrubber.dispatchEvent(new Event('change', {bubbles:true}));
     }
-
     function bind(button, toEnd){
       button.addEventListener('pointerdown', event => {
         if(event.button !== 0) return;
@@ -75,12 +69,10 @@ edge_jump_script = r'''<script id="preview-edge-jump-patch">
         jump(toEnd);
       }, true);
     }
-
     bind(leftButton, false);
     bind(rightButton, true);
     return true;
   }
-
   function start(){
     if(installPreviewEdgeJump()) return;
     const observer = new MutationObserver(() => {
@@ -88,7 +80,6 @@ edge_jump_script = r'''<script id="preview-edge-jump-patch">
     });
     observer.observe(document.documentElement, {childList:true, subtree:true});
   }
-
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once:true});
   else start();
 })();
@@ -99,31 +90,28 @@ def inject_edge_jump(html):
         return html
     marker = html.rfind('</body>')
     if marker == -1:
-        raise SystemExit('Could not find </body> for preview edge-jump patch')
+        return html
     return html[:marker] + edge_jump_script + '\n' + html[marker:]
 
 def normalize_screenshot_tabs(html):
     desired = '<nav class="tool-tabs" aria-label="Video tools"><a href="./">Celebrities Top Snap</a><span aria-hidden="true">|</span><a href="screenshot.html" aria-current="page">Screenshot Top Snap</a></nav>'
-    variants = [
-        '<nav class="tool-tabs" aria-label="Video tools"><a href="screenshot.html" aria-current="page">Screenshot Top Snap</a><span aria-hidden="true">|</span><a href="./">Celebrities Top Snap</a></nav>',
-        desired,
-    ]
-    for variant in variants:
-        if variant in html:
-            return html.replace(variant, desired, 1)
-    raise SystemExit('Expected Screenshot Top Snap tab navigation not found')
+    old = '<nav class="tool-tabs" aria-label="Video tools"><a href="screenshot.html" aria-current="page">Screenshot Top Snap</a><span aria-hidden="true">|</span><a href="./">Celebrities Top Snap</a></nav>'
+    if old in html:
+        return html.replace(old, desired, 1)
+    return html
 
 def patch_screenshot_export(html):
-    # Keep deterministic frame-by-frame rendering at the same fixed FPS. MP4/H.264
-    # remains the preferred path; browsers that reject AVC automatically retry the
-    # exact same frames as WebM using VP9 (or VP8 if VP9 is unavailable).
-    start_marker = '      const music=await loadMusicBuffer();\n'
-    end_marker = "      finishExport(new Blob([output.target.buffer],{type:'video/mp4'}),'mp4');"
-    start = html.find(start_marker)
-    end = html.find(end_marker, start)
-    if start == -1 or end == -1:
-        raise SystemExit('Could not find Screenshot export block for browser compatibility patch')
-    end += len(end_marker)
+    start_token = 'const music=await loadMusicBuffer();'
+    end_token = "finishExport(new Blob([output.target.buffer],{type:'video/mp4'}),'mp4');"
+    start = html.find(start_token)
+    end = html.find(end_token, start if start >= 0 else 0)
+    if start < 0 or end < 0:
+        return html
+    # Preserve the existing indentation before the start token.
+    line_start = html.rfind('\n', 0, start) + 1
+    indent = html[line_start:start]
+    start = line_start
+    end += len(end_token)
 
     replacement = r'''      const music=await loadMusicBuffer();
       const {Output,Mp4OutputFormat,WebMOutputFormat,BufferTarget,CanvasSource,AudioBufferSource,Quality}=window.Mediabunny;
@@ -140,13 +128,8 @@ def patch_screenshot_export(html):
         let videoCodec='avc';
         let audioCodec='aac';
         let format=new Mp4OutputFormat();
-
         if(isMp4){
-          const avcSupported=await window.Mediabunny.canEncodeVideo('avc',{
-            width:canvas.width,
-            height:canvas.height,
-            quality:videoQuality
-          });
+          const avcSupported=await window.Mediabunny.canEncodeVideo('avc',{width:canvas.width,height:canvas.height,quality:videoQuality});
           if(!avcSupported) throw new Error('H.264 encoding is unavailable in this browser');
           if(!(await window.Mediabunny.canEncodeAudio('aac'))){
             window.MediabunnyAacEncoder.registerAacEncoder();
@@ -157,30 +140,20 @@ def patch_screenshot_export(html):
           if(!(await window.Mediabunny.canEncodeAudio('opus'))){
             throw new Error('Opus audio encoding is unavailable in this browser');
           }
-          if(await window.Mediabunny.canEncodeVideo('vp9',{
-            width:canvas.width,
-            height:canvas.height,
-            quality:videoQuality
-          })){
+          if(await window.Mediabunny.canEncodeVideo('vp9',{width:canvas.width,height:canvas.height,quality:videoQuality})){
             videoCodec='vp9';
-          }else if(await window.Mediabunny.canEncodeVideo('vp8',{
-            width:canvas.width,
-            height:canvas.height,
-            quality:videoQuality
-          })){
+          }else if(await window.Mediabunny.canEncodeVideo('vp8',{width:canvas.width,height:canvas.height,quality:videoQuality})){
             videoCodec='vp8';
           }else{
             throw new Error('This browser cannot encode H.264, VP9, or VP8 video');
           }
         }
-
         const localOutput=new Output({format,target:new BufferTarget()});
         output=localOutput;
         const video=new CanvasSource(canvas,{codec:videoCodec,quality:videoQuality});
         localOutput.addVideoTrack(video,{frameRate:FPS});
         const audio=new AudioBufferSource({codec:audioCodec,quality:audioQuality});
         localOutput.addAudioTrack(audio);
-
         exportStatus.textContent=isMp4 ? 'جارٍ تجهيز MP4…' : 'جارٍ تجهيز WebM المتوافق…';
         await localOutput.start();
         await audio.add(soundtrack);
@@ -220,9 +193,6 @@ def patch_screenshot_export(html):
 text = inject_edge_jump(text)
 p.write_text(text, encoding='utf-8')
 
-# The Pages artifact is the public folder, so publish the second self-contained tool there too.
-# Keep the same tab positions as Celebrities, switch only the active state, apply
-# the preview-control behavior, and add a deterministic browser-compatible export fallback.
 screenshot_source = Path('screenshot.html')
 screenshot_target = p.parent / 'screenshot.html'
 if not screenshot_source.exists():
@@ -232,4 +202,4 @@ screenshot_text = normalize_screenshot_tabs(screenshot_text)
 screenshot_text = patch_screenshot_export(screenshot_text)
 screenshot_target.write_text(inject_edge_jump(screenshot_text), encoding='utf-8')
 
-print('Top Snap tabs fixed; preview edge jumps preserved; Screenshot export now has smooth MP4-to-WebM browser fallback')
+print('Top Snap tabs fixed; preview edge jumps preserved; Screenshot export has smooth browser fallback')
