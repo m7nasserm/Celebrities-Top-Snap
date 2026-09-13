@@ -187,7 +187,23 @@ replace_once('  .text-layer-card{', '''  .text-layout-suggestion{ display:flex; 
   .text-layout-suggestion button{ flex:none; border:1px solid var(--accent); background:var(--panel); color:var(--accent); border-radius:8px; padding:7px 10px; font:600 14px 'Tajawal',sans-serif; cursor:pointer; }
   .text-layout-suggestion button:hover{ background:var(--panel-2); }
   .text-layer-card{''')
-replace_once('  /* ---------------- playback ---------------- */', '''  // Optional 2+2 to 1+2 text layout. Attach after the slider controls so
+replace_once('  /* ---------------- playback ---------------- */', '''  // The subline may never exceed the headline size minus three pixels.
+  // Allow 17px at the headline's existing 20px minimum.
+  const headlineSizeSlider = textLayersWrap.querySelector('input[data-field="size"][data-idx="0"]');
+  const sublineSizeSlider = textLayersWrap.querySelector('input[data-field="size"][data-idx="1"]');
+  function syncSublineSizeLimit(){
+    const limit = state.texts[0].size - 3;
+    sublineSizeSlider.min = '17';
+    sublineSizeSlider.max = String(limit);
+    if(state.texts[1].size > limit){
+      sublineSizeSlider.value = String(limit);
+      sublineSizeSlider.dispatchEvent(new Event('input', {bubbles:true}));
+    }
+  }
+  headlineSizeSlider.addEventListener('input', syncSublineSizeLimit);
+  syncSublineSizeLimit();
+
+  // Optional 2+2 to 1+2 text layout. Attach after the slider controls so
   // suggestion failures cannot prevent their creation.
   const textSuggestion = document.getElementById('textLayoutSuggestion');
   const textSuggestionMessage = document.getElementById('textSuggestionMessage');
