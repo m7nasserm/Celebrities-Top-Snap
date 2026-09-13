@@ -75,6 +75,9 @@ replace_once('  input[type=range]{ -webkit-appearance:none;', '''  .range-steppe
   .range-stepper button{ position:relative; flex:0 0 25px; width:25px; height:25px; padding:0; border:1px solid var(--line); border-radius:7px; background:var(--panel); color:var(--accent); cursor:pointer; touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
   .range-stepper button::before,.range-stepper button.range-step-plus::after{ content:""; position:absolute; left:50%; top:50%; width:11px; height:2px; border-radius:2px; background:currentColor; transform:translate(-50%,-50%); }
   .range-stepper button.range-step-plus::after{ transform:translate(-50%,-50%) rotate(90deg); }
+  .range-stepper.preview-stepper button{ display:grid; place-items:center; }
+  .range-stepper.preview-stepper button::before,.range-stepper.preview-stepper button::after{ display:none; }
+  .range-stepper.preview-stepper button svg{ width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; }
   .range-stepper button:hover{ background:var(--panel-2); border-color:var(--accent); }
   .range-stepper button:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
   .slider-row .range-stepper{ flex:1; max-width:440px; }
@@ -90,6 +93,7 @@ replace_once('  /* ---------------- playback ---------------- */', '''  // Give 
   document.querySelectorAll('input[type="range"]').forEach(input=>{
     const stepper = document.createElement('div');
     stepper.className = 'range-stepper';
+    if(input.id === 'scrubber') stepper.classList.add('preview-stepper');
     const label = input.closest('.field, .slider-row')?.querySelector('label')?.textContent.trim() ||
       (input.id === 'scrubber' ? 'وقت المعاينة' : input.id);
     function adjust(direction){
@@ -105,6 +109,10 @@ replace_once('  /* ---------------- playback ---------------- */', '''  // Give 
       const button = document.createElement('button');
       button.type = 'button';
       button.className = direction > 0 ? 'range-step-plus' : 'range-step-minus';
+      if(input.id === 'scrubber'){
+        const arrows = direction > 0 ? 'M3 4l5 5-5 5 M9 4l5 5-5 5' : 'M15 4l-5 5 5 5 M9 4l-5 5 5 5';
+        button.innerHTML = `<svg viewBox="0 0 18 18" aria-hidden="true"><path d="${arrows}"/></svg>`;
+      }
       button.setAttribute('aria-label', action + ' ' + label);
       let holdDelay, repeatInterval;
       function stop(){
