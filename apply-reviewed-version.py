@@ -113,18 +113,123 @@ def normalize_screenshot_tabs(html):
             return html.replace(variant, desired, 1)
     raise SystemExit('Expected Screenshot Top Snap tab navigation not found')
 
+def patch_screenshot_export(html):
+    # Keep deterministic frame-by-frame rendering at the same fixed FPS. MP4/H.264
+    # remains the preferred path; browsers that reject AVC automatically retry the
+    # exact same frames as WebM using VP9 (or VP8 if VP9 is unavailable).
+    start_marker = '      const music=await loadMusicBuffer();\n'
+    end_marker = "      finishExport(new Blob([output.target.buffer],{type:'video/mp4'}),'mp4');"
+    start = html.find(start_marker)
+    end = html.find(end_marker, start)
+    if start == -1 or end == -1:
+        raise SystemExit('Could not find Screenshot export block for browser compatibility patch')
+    end += len(end_marker)
+
+    replacement = r'''      const music=await loadMusicBuffer();
+      const {Output,Mp4OutputFormat,WebMOutputFormat,BufferTarget,CanvasSource,AudioBufferSource,Quality}=window.Mediabunny;
+      const length=Math.round(DURATION_S*music.sampleRate);
+      const soundtrack=audioCtx.createBuffer(music.numberOfChannels,length,music.sampleRate);
+      for(let channel=0;channel<music.numberOfChannels;channel++){
+        soundtrack.getChannelData(channel).set(music.getChannelData(channel).subarray(0,length));
+      }
+
+      async function encodeFrameByFrame(kind){
+        const isMp4=kind==='mp4';
+        const videoQuality=new Quality({bitrate:8_000_000});
+        const audioQuality=new Quality({bitrate:160_000});
+        let videoCodec='avc';
+        let audioCodec='aac';
+        let format=new Mp4OutputFormat();
+
+        if(isMp4){
+          const avcSupported=await window.Mediabunny.canEncodeVideo('avc',{
+            width:canvas.width,
+            height:canvas.height,
+            quality:videoQuality
+          });
+          if(!avcSupported) throw new Error('H.264 encoding is unavailable in this browser');
+          if(!(await window.Mediabunny.canEncodeAudio('aac'))){
+            window.MediabunnyAacEncoder.registerAacEncoder();
+          }
+        }else{
+          format=new WebMOutputFormat();
+          audioCodec='opus';
+          if(!(await window.Mediabunny.canEncodeAudio('opus'))){
+            throw new Error('Opus audio encoding is unavailable in this browser');
+          }
+          if(await window.Mediabunny.canEncodeVideo('vp9',{
+            width:canvas.width,
+            height:canvas.height,
+            quality:videoQuality
+          })){
+            videoCodec='vp9';
+          }else if(await window.Mediabunny.canEncodeVideo('vp8',{
+            width:canvas.width,
+            height:canvas.height,
+            quality:videoQuality
+          })){
+            videoCodec='vp8';
+          }else{
+            throw new Error('This browser cannot encode H.264, VP9, or VP8 video');
+          }
+        }
+
+        const localOutput=new Output({format,target:new BufferTarget()});
+        output=localOutput;
+        const video=new CanvasSource(canvas,{codec:videoCodec,quality:videoQuality});
+        localOutput.addVideoTrack(video,{frameRate:FPS});
+        const audio=new AudioBufferSource({codec:audioCodec,quality:audioQuality});
+        localOutput.addAudioTrack(audio);
+
+        exportStatus.textContent=isMp4 ? 'جارٍ تجهيز MP4…' : 'جارٍ تجهيز WebM المتوافق…';
+        await localOutput.start();
+        await audio.add(soundtrack);
+        for(let frame=0;frame<TOTAL_FRAMES;frame++){
+          renderFrame(frame);
+          await video.add(frame/FPS,1/FPS,{keyFrame:frame%(FPS*2)===0});
+          exportStatus.textContent=(isMp4 ? 'جارٍ تصدير MP4… ' : 'جارٍ تصدير WebM… ')+(frame+1)+' / '+TOTAL_FRAMES;
+          if(frame%5===0)await new Promise(resolve=>setTimeout(resolve,0));
+        }
+        exportStatus.textContent=isMp4 ? 'جارٍ إنهاء ملف MP4…' : 'جارٍ إنهاء ملف WebM…';
+        await localOutput.finalize();
+        return new Blob([localOutput.target.buffer],{type:isMp4?'video/mp4':'video/webm'});
+      }
+
+      let exportedBlob;
+      let exportedExt='mp4';
+      try{
+        exportedBlob=await encodeFrameByFrame('mp4');
+      }catch(mp4Error){
+        console.warn('MP4/H.264 export unavailable; retrying frame-by-frame WebM.',mp4Error);
+        if(output){try{await output.cancel();}catch{}}
+        output=null;
+        exportedExt='webm';
+        exportStatus.textContent='MP4 غير مدعوم في هذا المتصفح — جارٍ التحويل تلقائياً إلى WebM…';
+        exportedBlob=await encodeFrameByFrame('webm');
+      }
+      finishExport(exportedBlob,exportedExt);'''
+
+    html = html[:start] + replacement + html[end:]
+    html = html.replace(
+        'يُصدَّر الفيديو بصيغة MP4 بدقة 1080×1920 بمعدل ثابت 30 إطاراً/ثانية، مع معالجة كل إطار للحفاظ على سلاسة الحركة. يتطلب متصفحاً حديثاً يدعم WebCodecs مثل Chrome أو Edge.',
+        'يُصدَّر الفيديو بدقة 1080×1920 وبمعدل ثابت 30 إطاراً/ثانية مع معالجة كل إطار للحفاظ على سلاسة الحركة. يستخدم MP4/H.264 عند دعمه، ويتحوّل تلقائياً إلى WebM/VP9 أو VP8 عند الحاجة.'
+    )
+    html = html.replace("exportStatus.textContent='تعذّر تصدير MP4: '+error.message;", "exportStatus.textContent='تعذّر تصدير الفيديو: '+error.message;")
+    return html
+
 text = inject_edge_jump(text)
 p.write_text(text, encoding='utf-8')
 
 # The Pages artifact is the public folder, so publish the second self-contained tool there too.
-# Keep the same tab positions as Celebrities, switch only the active state, and apply
-# the same preview-control behavior while copying it.
+# Keep the same tab positions as Celebrities, switch only the active state, apply
+# the preview-control behavior, and add a deterministic browser-compatible export fallback.
 screenshot_source = Path('screenshot.html')
 screenshot_target = p.parent / 'screenshot.html'
 if not screenshot_source.exists():
     raise SystemExit('screenshot.html is missing from repository root')
 screenshot_text = screenshot_source.read_text(encoding='utf-8')
 screenshot_text = normalize_screenshot_tabs(screenshot_text)
+screenshot_text = patch_screenshot_export(screenshot_text)
 screenshot_target.write_text(inject_edge_jump(screenshot_text), encoding='utf-8')
 
-print('Top Snap tabs fixed in place; inactive tab stays muted; preview double arrows jump to start/end in both tools')
+print('Top Snap tabs fixed; preview edge jumps preserved; Screenshot export now has smooth MP4-to-WebM browser fallback')
