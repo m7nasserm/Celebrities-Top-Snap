@@ -149,23 +149,6 @@
   select:focus, input:focus, textarea:focus{ border-color: var(--accent); }
   textarea{ resize:vertical; min-height:44px; }
 
-  .range-stepper{ display:flex; align-items:center; gap:7px; direction:ltr; width:100%; min-width:0; }
-  .range-stepper input[type=range]{ flex:1 1 0; min-width:0; width:100%; max-width:none; margin:0; }
-  .range-stepper button{ position:relative; flex:0 0 25px; width:25px; height:25px; padding:0; border:1px solid var(--line); border-radius:7px; background:var(--panel); color:var(--accent); cursor:pointer; touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
-  .range-stepper button::before,.range-stepper button.range-step-plus::after{ content:""; position:absolute; left:50%; top:50%; width:11px; height:2px; border-radius:2px; background:currentColor; transform:translate(-50%,-50%); }
-  .range-stepper button.range-step-plus::after{ transform:translate(-50%,-50%) rotate(90deg); }
-  .range-stepper.preview-stepper button{ display:grid; place-items:center; }
-  .range-stepper.preview-stepper button::before,.range-stepper.preview-stepper button::after{ display:none; }
-  .range-stepper.preview-stepper button svg{ width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; }
-  .range-stepper button:hover{ background:var(--panel-2); border-color:var(--accent); }
-  .range-stepper button:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
-  .slider-row .range-stepper{ flex:1; max-width:440px; }
-  .intensity-row .range-stepper{ max-width:292px; }
-  .settings-sliders .slider-row .range-stepper{ grid-column:1; grid-row:1; width:100%; max-width:none; }
-  .settings-sliders .slider-row .range-stepper input[type=range]{ grid-column:auto; grid-row:auto; margin:0; width:100%; max-width:none; }
-  .scrubber-row .time-label{ flex:0 0 104px; width:104px; white-space:nowrap; }
-  .scrubber-row .range-stepper{ flex:1; }
-  @media (max-width:700px){ .range-stepper{ gap:5px; } .range-stepper button{ flex-basis:23px; width:23px; height:23px; } }
   input[type=range]{ -webkit-appearance:none; appearance:none; height:5px; border-radius:4px; background:var(--line); outline:none; }
   input[type=range]::-webkit-slider-thumb{
     -webkit-appearance:none; appearance:none; width:16px;height:16px;border-radius:50%;
@@ -350,6 +333,11 @@
   .upload-box input{ position:absolute; inset:0; opacity:0; cursor:pointer; }
   .file-chip{ font-size:15px; color:var(--good); margin-top:4px; font-weight:700; }
 
+  .text-layout-suggestion{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:12px; padding:10px 12px; border:1px solid #d5cff0; border-radius:10px; background:#F3EAFD; color:var(--text); font-size:14px; line-height:1.5; }
+  .text-layout-suggestion[hidden]{ display:none; }
+  .text-layout-suggestion button{ flex:none; border:1px solid var(--accent); background:var(--panel); color:var(--accent); border-radius:8px; padding:7px 10px; font:600 14px 'Tajawal',sans-serif; cursor:pointer; }
+  .text-layout-suggestion button:hover{ background:var(--panel-2); }
+  @media (max-width:700px){ .text-layout-suggestion{ flex-wrap:wrap; } }
   .text-layer-card{
     border:1.5px solid var(--line); border-radius:14px; padding:14px; background:var(--panel-2);
     display:flex; flex-direction:column; gap:10px; position:relative;
@@ -506,6 +494,10 @@
         <section class="stack-section">
           <label class="section-title">النص</label>
           <div id="textLayersWrap" class="text-columns"></div>
+          <div id="textLayoutSuggestion" class="text-layout-suggestion" hidden>
+            <span>اقتراح تنسيق: عنوان بسطر واحد ونص فرعي بسطرين — الحجم 63/60 والتباعد 20/15 بكسل</span>
+            <button type="button" id="applyTextLayoutSuggestion">تطبيق الاقتراح</button>
+          </div>
         </section>
 
         <!-- MUSIC -->
@@ -44655,7 +44647,6 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
   // Save each slider's manually selected value so it can return when the
   // headline fits on one line again.
   const preferredTextLineSpacing = state.texts.map(layer => layer.lineSpacing);
-  const userAdjustedLineSpacing = state.texts.map(() => false);
   let compactHeadlineSpacing = false;
 
   function syncHeadlineLineSpacing(){
@@ -44665,14 +44656,14 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
     // On the first render, the text cards may not exist yet; update them once
     // they are created, while avoiding DOM work during every export frame.
     const firstSlider = document.querySelector('#textLayersWrap input[data-field="lineSpacing"]');
-    if(wraps === compactHeadlineSpacing && firstSlider) return;
+    if(wraps === compactHeadlineSpacing && firstSlider && firstSlider.disabled === wraps) return;
     compactHeadlineSpacing = wraps;
     state.texts.forEach((layer, idx)=>{
-      layer.lineSpacing = wraps && !userAdjustedLineSpacing[idx] ? 0 : preferredTextLineSpacing[idx];
+      layer.lineSpacing = wraps ? 0 : preferredTextLineSpacing[idx];
       const slider = document.querySelector(`#textLayersWrap input[data-field="lineSpacing"][data-idx="${idx}"]`);
       if(!slider) return;
       slider.value = layer.lineSpacing;
-      slider.disabled = false;
+      slider.disabled = wraps;
       const label = slider.closest('.field').querySelector('[data-out="lineSpacing"]');
       if(label) label.textContent = layer.lineSpacing + 'px';
     });
@@ -44907,6 +44898,38 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
 
   /* ---------------- text layers ---------------- */
   const textLayersWrap = document.getElementById("textLayersWrap");
+  const textLayoutSuggestion = document.getElementById("textLayoutSuggestion");
+  function updateTextLayoutSuggestion(){
+    const [headline, subline] = state.texts;
+    if(!headline.text.trim() || !subline.text.trim()){
+      textLayoutSuggestion.hidden = true;
+      return;
+    }
+    const count = (layer, size, family) =>
+      wrapLines(layer.text, `${size}px '${family}'`, TEXT_BOX.w).length;
+    textLayoutSuggestion.hidden = !(
+      count(headline, headline.size, 'PFDinXBlack') === 2 &&
+      count(subline, subline.size, 'PFDinMedium') === 2 &&
+      count(headline, 63, 'PFDinXBlack') === 1 &&
+      count(subline, 60, 'PFDinMedium') === 2
+    );
+  }
+  document.getElementById("applyTextLayoutSuggestion").addEventListener("click", ()=>{
+    if(textLayoutSuggestion.hidden) return;
+    state.texts.forEach((layer, idx)=>{
+      layer.size = idx === 0 ? 63 : 60;
+      layer.lineSpacing = idx === 0 ? 20 : 15;
+      preferredTextLineSpacing[idx] = layer.lineSpacing;
+      userAdjustedLineSpacing[idx] = true;
+      const card = textLayersWrap.children[idx];
+      for(const field of ['size', 'lineSpacing']){
+        card.querySelector(`[data-field="${field}"]`).value = layer[field];
+        card.querySelector(`[data-out="${field}"]`).textContent = layer[field] + 'px';
+      }
+    });
+    renderCurrent();
+    updateTextLayoutSuggestion();
+  });
 
   function renderTextLayers(){
     textLayersWrap.innerHTML = "";
@@ -44941,16 +44964,16 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
           </div>
         </div>
       `;
-      card.querySelector('[data-field="text"]').addEventListener("input", e=>{ state.texts[idx].text = e.target.value; renderCurrent(); });
+      card.querySelector('[data-field="text"]').addEventListener("input", e=>{ state.texts[idx].text = e.target.value; renderCurrent(); updateTextLayoutSuggestion(); });
       card.querySelector('[data-field="size"]').addEventListener("input", e=>{
         state.texts[idx].size = +e.target.value;
         card.querySelector('[data-out="size"]').textContent = e.target.value+"px";
         renderCurrent();
+        updateTextLayoutSuggestion();
       });
       card.querySelector('[data-field="color"]').addEventListener("input", e=>{ state.texts[idx].color = e.target.value; renderCurrent(); });
       card.querySelector('[data-field="lineSpacing"]').addEventListener("input", e=>{
         preferredTextLineSpacing[idx] = +e.target.value;
-        userAdjustedLineSpacing[idx] = true;
         state.texts[idx].lineSpacing = +e.target.value;
         card.querySelector('[data-out="lineSpacing"]').textContent = e.target.value+"px";
         renderCurrent();
@@ -44966,6 +44989,7 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
     });
   }
   renderTextLayers();
+  updateTextLayoutSuggestion();
 
   /* ---------------- music controls ---------------- */
   const musicInput = document.getElementById("musicInput");
@@ -45169,59 +45193,6 @@ if (typeof module === "object" && typeof module.exports === "object") Object.ass
     renderTrackGrid();
   });
 
-
-  // Give every range input, including the dynamically created text controls,
-  // one-unit adjustments without changing its native drag step or input event.
-  document.querySelectorAll('input[type="range"]').forEach(input=>{
-    const stepper = document.createElement('div');
-    stepper.className = 'range-stepper';
-    if(input.id === 'scrubber') stepper.classList.add('preview-stepper');
-    const label = input.closest('.field, .slider-row')?.querySelector('label')?.textContent.trim() ||
-      (input.id === 'scrubber' ? 'وقت المعاينة' : input.id);
-    function adjust(direction){
-      if(input.disabled) return;
-      const min = Number(input.min || 0);
-      const max = Number(input.max || 100);
-      const next = Math.max(min, Math.min(max, Number(input.value) + direction));
-      if(next === Number(input.value)) return;
-      input.value = String(next);
-      input.dispatchEvent(new Event('input', {bubbles:true}));
-    }
-    function makeButton(direction, action){
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = direction > 0 ? 'range-step-plus' : 'range-step-minus';
-      if(input.id === 'scrubber'){
-        const arrows = direction > 0 ? 'M3 4l5 5-5 5 M9 4l5 5-5 5' : 'M15 4l-5 5 5 5 M9 4l-5 5 5 5';
-        button.innerHTML = `<svg viewBox="0 0 18 18" aria-hidden="true"><path d="${arrows}"/></svg>`;
-      }
-      button.setAttribute('aria-label', action + ' ' + label);
-      let holdDelay, repeatInterval;
-      function stop(){
-        clearTimeout(holdDelay);
-        clearInterval(repeatInterval);
-      }
-      button.addEventListener('pointerdown', event=>{
-        if(event.button !== 0) return;
-        event.preventDefault();
-        stop();
-        adjust(direction);
-        holdDelay = setTimeout(()=>{
-          repeatInterval = setInterval(()=>adjust(direction), 75);
-        }, 350);
-      });
-      button.addEventListener('pointerup', stop);
-      button.addEventListener('pointercancel', stop);
-      button.addEventListener('pointerleave', stop);
-      window.addEventListener('blur', stop);
-      button.addEventListener('click', event=>{
-        if(event.detail === 0) adjust(direction); // Keyboard and assistive tech.
-      });
-      return button;
-    }
-    input.before(stepper);
-    stepper.append(makeButton(-1, 'تقليل'), input, makeButton(1, 'زيادة'));
-  });
 
   /* ---------------- playback ---------------- */
   const scrubber = document.getElementById("scrubber");
